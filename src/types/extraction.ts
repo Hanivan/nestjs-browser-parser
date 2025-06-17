@@ -1,12 +1,14 @@
 // Transform function types - supports various transformation patterns
-export type TransformFunction<TInput = any, TOutput = any> = (value: TInput) => TOutput;
-export type TransformObject<TInput = any, TOutput = any> = { 
+export type TransformFunction<TInput = any, TOutput = any> = (
+  value: TInput,
+) => TOutput;
+export type TransformObject<TInput = any, TOutput = any> = {
   transform: (value: TInput) => TOutput;
 };
-export type TransformClass<TInput = any, TOutput = any> = new () => { 
+export type TransformClass<TInput = any, TOutput = any> = new () => {
   transform: (value: TInput) => TOutput;
 };
-export type TransformType<TInput = any, TOutput = any> = 
+export type TransformType<TInput = any, TOutput = any> =
   | TransformFunction<TInput, TOutput>
   | TransformObject<TInput, TOutput>
   | TransformClass<TInput, TOutput>

@@ -34,7 +34,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepublishOnly": "npm run build",
-    "demo": "echo \"Available demos:\n  npm run demo:basic - Basic HTML parsing with JavaScript\n  npm run demo:browser - Browser configuration examples\n  npm run demo:screenshot - Screenshot and PDF generation\n  npm run demo:evaluate - JavaScript evaluation on pages\n  npm run demo:structured - Structured data extraction\n  npm run demo:typing - Enhanced TypeScript typing examples\n  npm run demo:amazon - Real Amazon search with browser interaction\n  npm run demo:all - Run all demos\n\nVerbose mode (shows detailed errors):\n  npm run demo:basic:verbose\n  npm run demo:browser:verbose\n  npm run demo:screenshot:verbose\n  npm run demo:evaluate:verbose\n  npm run demo:structured:verbose\n  npm run demo:typing:verbose\n  npm run demo:amazon:verbose\"",
+    "demo": "echo \"Available demos:\n  npm run demo:basic - Basic HTML parsing with JavaScript\n  npm run demo:browser - Browser configuration examples\n  npm run demo:screenshot - Screenshot and PDF generation\n  npm run demo:evaluate - JavaScript evaluation on pages\n  npm run demo:structured - Structured data extraction\n  npm run demo:typing - Enhanced TypeScript typing examples\n  npm run demo:amazon - Real Amazon search with browser interaction\n  npm run demo:youtube - YouTube search with multiple keywords loop\n  npm run demo:all - Run all demos\n\nVerbose mode (shows detailed errors):\n  npm run demo:basic:verbose\n  npm run demo:browser:verbose\n  npm run demo:screenshot:verbose\n  npm run demo:evaluate:verbose\n  npm run demo:structured:verbose\n  npm run demo:typing:verbose\n  npm run demo:amazon:verbose\n  npm run demo:youtube:verbose\"",
     "demo:basic": "ts-node src/examples/basic-parsing.ts",
     "demo:browser": "ts-node src/examples/browser-config.ts",
     "demo:screenshot": "ts-node src/examples/screenshot-pdf.ts",
@@ -42,6 +42,7 @@
     "demo:structured": "ts-node src/examples/structured-extraction.ts",
     "demo:typing": "ts-node src/examples/enhanced-typing.ts",
     "demo:amazon": "ts-node src/examples/amazon-real-search.ts",
+    "demo:youtube": "ts-node src/examples/youtube-search.ts",
     "demo:basic:verbose": "ts-node src/examples/basic-parsing.ts --verbose",
     "demo:browser:verbose": "ts-node src/examples/browser-config.ts --verbose",
     "demo:screenshot:verbose": "ts-node src/examples/screenshot-pdf.ts --verbose",
@@ -49,7 +50,8 @@
     "demo:structured:verbose": "ts-node src/examples/structured-extraction.ts --verbose",
     "demo:typing:verbose": "ts-node src/examples/enhanced-typing.ts --verbose",
     "demo:amazon:verbose": "ts-node src/examples/amazon-real-search.ts --verbose",
-    "demo:all": "npm run demo:basic && echo '\n\n' && npm run demo:browser && echo '\n\n' && npm run demo:screenshot && echo '\n\n' && npm run demo:evaluate && echo '\n\n' && npm run demo:structured && echo '\n\n' && npm run demo:typing && echo '\n\n' && npm run demo:amazon"
+    "demo:youtube:verbose": "ts-node src/examples/youtube-search.ts --verbose",
+    "demo:all": "npm run demo:basic && echo '\n\n' && npm run demo:browser && echo '\n\n' && npm run demo:screenshot && echo '\n\n' && npm run demo:evaluate && echo '\n\n' && npm run demo:structured && echo '\n\n' && npm run demo:typing && echo '\n\n' && npm run demo:amazon && echo '\n\n' && npm run demo:youtube"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.3",

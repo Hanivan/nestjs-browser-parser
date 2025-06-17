@@ -4,7 +4,7 @@ async function demonstrateJavaScriptEvaluation() {
   const parser = new JSParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: true,
-    browserConnection: { 
+    browserConnection: {
       type: 'builtin',
       executablePath: '/usr/bin/chromium',
       args: ['--no-sandbox', '--disable-dev-shm-usage'],
@@ -18,9 +18,12 @@ async function demonstrateJavaScriptEvaluation() {
     console.log('1. Basic JavaScript Evaluation');
     console.log('===============================');
 
-    const basicResult = await parser.evaluateOnPage(
+    const basicResult = await parser.evaluateOnPage<{
+      title: string;
+      url: string;
+    }>(
       'https://example.com',
-      '() => ({ title: document.title, url: window.location.href })'
+      '() => ({ title: document.title, url: window.location.href })',
     );
 
     console.log('📊 Basic evaluation result:');
@@ -31,9 +34,13 @@ async function demonstrateJavaScriptEvaluation() {
     console.log('\n2. DOM Analysis');
     console.log('===============');
 
-    const domAnalysis = await parser.evaluateOnPage(
+    const domAnalysis = await parser.evaluateOnPage<{
+      elementCount: number;
+      bodyText: string;
+      hasImages: boolean;
+    }>(
       'https://httpbin.org/html',
-      '() => ({ elementCount: document.querySelectorAll("*").length, bodyText: document.body.innerText.substring(0, 100), hasImages: document.querySelectorAll("img").length > 0 })'
+      '() => ({ elementCount: document.querySelectorAll("*").length, bodyText: document.body.innerText.substring(0, 100), hasImages: document.querySelectorAll("img").length > 0 })',
     );
 
     console.log('🔍 DOM analysis:');
@@ -53,7 +60,7 @@ async function demonstrateJavaScriptEvaluation() {
           const links = document.querySelectorAll('a');
           const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
           const forms = document.querySelectorAll('form');
-          
+
           return {
             linkCount: links.length,
             headingCount: headings.length,
@@ -65,7 +72,7 @@ async function demonstrateJavaScriptEvaluation() {
             userAgent: navigator.userAgent,
           };
         });
-      }
+      },
     );
 
     console.log('🧮 Complex evaluation result:');
@@ -74,7 +81,9 @@ async function demonstrateJavaScriptEvaluation() {
     console.log(`   Forms: ${complexResult?.formCount}`);
     console.log(`   First link: ${complexResult?.firstLinkText || 'None'}`);
     console.log(`   Page height: ${complexResult?.pageHeight}px`);
-    console.log(`   Viewport: ${complexResult?.viewportWidth}x${complexResult?.viewportHeight}`);
+    console.log(
+      `   Viewport: ${complexResult?.viewportWidth}x${complexResult?.viewportHeight}`,
+    );
 
     // Example 4: Wait for dynamic content
     console.log('\n4. Wait for Dynamic Content');
@@ -85,30 +94,38 @@ async function demonstrateJavaScriptEvaluation() {
       async (page) => {
         // Wait for page to be fully loaded
         await page.waitForLoadState('networkidle');
-        
+
         return await page.evaluate(() => {
           return {
             readyState: document.readyState,
             timestamp: new Date().toISOString(),
-            loadedImages: Array.from(document.images).filter(img => img.complete).length,
+            loadedImages: Array.from(document.images).filter(
+              (img) => img.complete,
+            ).length,
             totalImages: document.images.length,
           };
         });
-      }
+      },
     );
 
     console.log('⏱️ Dynamic content analysis:');
     console.log(`   Ready state: ${dynamicResult?.readyState}`);
     console.log(`   Timestamp: ${dynamicResult?.timestamp}`);
-    console.log(`   Loaded images: ${dynamicResult?.loadedImages}/${dynamicResult?.totalImages}`);
+    console.log(
+      `   Loaded images: ${dynamicResult?.loadedImages}/${dynamicResult?.totalImages}`,
+    );
 
     // Example 5: CSS and styling analysis
     console.log('\n5. CSS and Styling Analysis');
     console.log('============================');
 
-    const stylingResult = await parser.evaluateOnPage(
+    const stylingResult = await parser.evaluateOnPage<{
+      backgroundColor: string;
+      fontSize: string;
+      fontFamily: string;
+    }>(
       'https://httpbin.org/html',
-      '() => ({ backgroundColor: getComputedStyle(document.body).backgroundColor, fontSize: getComputedStyle(document.body).fontSize, fontFamily: getComputedStyle(document.body).fontFamily })'
+      '() => ({ backgroundColor: getComputedStyle(document.body).backgroundColor, fontSize: getComputedStyle(document.body).fontSize, fontFamily: getComputedStyle(document.body).fontFamily })',
     );
 
     console.log('🎨 Styling analysis:');
@@ -120,14 +137,20 @@ async function demonstrateJavaScriptEvaluation() {
     console.log('\n6. Local Storage and Session Data');
     console.log('==================================');
 
-    const storageResult = await parser.evaluateOnPage(
+    const storageResult = await parser.evaluateOnPage<{
+      localStorageLength: number;
+      sessionStorageLength: number;
+      cookieCount: number;
+    }>(
       'https://httpbin.org/html',
-      '() => ({ localStorageLength: localStorage.length, sessionStorageLength: sessionStorage.length, cookieCount: document.cookie.split(";").filter(c => c.trim()).length })'
+      '() => ({ localStorageLength: localStorage.length, sessionStorageLength: sessionStorage.length, cookieCount: document.cookie.split(";").filter(c => c.trim()).length })',
     );
 
     console.log('💾 Storage analysis:');
     console.log(`   Local storage items: ${storageResult?.localStorageLength}`);
-    console.log(`   Session storage items: ${storageResult?.sessionStorageLength}`);
+    console.log(
+      `   Session storage items: ${storageResult?.sessionStorageLength}`,
+    );
     console.log(`   Cookies: ${storageResult?.cookieCount}`);
 
     // Example 7: Performance metrics
@@ -138,23 +161,30 @@ async function demonstrateJavaScriptEvaluation() {
       'https://httpbin.org/html',
       async (page) => {
         await page.waitForLoadState('load');
-        
+
         return await page.evaluate(() => {
-          const perf = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-          
+          const perf = performance.getEntriesByType(
+            'navigation',
+          )[0] as PerformanceNavigationTiming;
+
           return {
             loadTime: perf ? perf.loadEventEnd - perf.loadEventStart : 0,
-            domContentLoaded: perf ? perf.domContentLoadedEventEnd - perf.domContentLoadedEventStart : 0,
-            firstPaint: performance.getEntriesByName('first-paint')[0]?.startTime || 0,
+            domContentLoaded: perf
+              ? perf.domContentLoadedEventEnd - perf.domContentLoadedEventStart
+              : 0,
+            firstPaint:
+              performance.getEntriesByName('first-paint')[0]?.startTime || 0,
             timeOrigin: performance.timeOrigin,
           };
         });
-      }
+      },
     );
 
     console.log('⚡ Performance metrics:');
     console.log(`   Load time: ${performanceResult?.loadTime || 0}ms`);
-    console.log(`   DOM content loaded: ${performanceResult?.domContentLoaded || 0}ms`);
+    console.log(
+      `   DOM content loaded: ${performanceResult?.domContentLoaded || 0}ms`,
+    );
     console.log(`   First paint: ${performanceResult?.firstPaint || 0}ms`);
 
     // Example 8: Form interaction
@@ -168,14 +198,14 @@ async function demonstrateJavaScriptEvaluation() {
         const inputs = await page.$$('input');
         const textareas = await page.$$('textarea');
         const selects = await page.$$('select');
-        
+
         return {
           formCount: forms.length,
           inputCount: inputs.length,
           textareaCount: textareas.length,
           selectCount: selects.length,
         };
-      }
+      },
     );
 
     console.log('📝 Form analysis:');
@@ -195,8 +225,8 @@ async function demonstrateJavaScriptEvaluation() {
           // Custom extraction logic
           const extractTextFromElements = (selector: string) => {
             return Array.from(document.querySelectorAll(selector))
-              .map(el => el.textContent?.trim())
-              .filter(text => text && text.length > 0);
+              .map((el) => el.textContent?.trim())
+              .filter((text) => text && text.length > 0);
           };
 
           return {
@@ -206,12 +236,14 @@ async function demonstrateJavaScriptEvaluation() {
             wordCount: document.body.innerText.split(/\s+/).length,
           };
         });
-      }
+      },
     );
 
     console.log('🎯 Custom extraction:');
     console.log(`   Headings found: ${customResult?.allHeadings?.length || 0}`);
-    console.log(`   Paragraphs analyzed: ${customResult?.allParagraphs?.length || 0}`);
+    console.log(
+      `   Paragraphs analyzed: ${customResult?.allParagraphs?.length || 0}`,
+    );
     console.log(`   Link texts: ${customResult?.allLinkTexts?.length || 0}`);
     console.log(`   Total word count: ${customResult?.wordCount || 0}`);
 
@@ -226,7 +258,7 @@ async function demonstrateJavaScriptEvaluation() {
     try {
       await parser.evaluateOnPage(
         'https://httpbin.org/html',
-        '() => { throw new Error("Intentional error for demo"); }'
+        '() => { throw new Error("Intentional error for demo"); }',
       );
     } catch (error) {
       console.log('🚨 Caught evaluation error (expected):');
@@ -235,9 +267,11 @@ async function demonstrateJavaScriptEvaluation() {
     }
 
     console.log('\n✅ JavaScript evaluation demonstration completed!');
-
   } catch (error) {
-    console.error('❌ Error demonstrating JavaScript evaluation:', error.message);
+    console.error(
+      '❌ Error demonstrating JavaScript evaluation:',
+      error.message,
+    );
   } finally {
     await parser.cleanup();
   }

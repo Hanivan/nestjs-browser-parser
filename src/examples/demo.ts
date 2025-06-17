@@ -20,7 +20,7 @@ export class DemoAppModule {}
 
 export async function runDemo() {
   console.log('🚀 Starting NestJS JS Parser Demo');
-  
+
   const app = await NestFactory.createApplicationContext(DemoAppModule);
   const jsParser = app.get(JSParserService);
 
@@ -31,9 +31,9 @@ export async function runDemo() {
       verbose: true,
       timeout: 15000,
     });
-    
+
     const pageInfo = jsParser.extractStructuredFromHtml(response.html, {
-      title: { selector: 'title', type: 'css' }
+      title: { selector: 'title', type: 'css' },
     });
     console.log('Title:', pageInfo.title);
     console.log('Status:', response.status);
@@ -58,7 +58,7 @@ export async function runDemo() {
         multiple: true,
       },
     });
-    
+
     console.log('Structured data:', JSON.stringify(structured, null, 2));
 
     // Screenshot example
@@ -73,10 +73,9 @@ export async function runDemo() {
     console.log('\n⚡ JavaScript Evaluation:');
     const jsResult = await jsParser.evaluateOnPage(
       'https://httpbin.org/html',
-      '() => ({ title: document.title, elementCount: document.querySelectorAll("*").length })'
+      '() => ({ title: document.title, elementCount: document.querySelectorAll("*").length })',
     );
     console.log('JS Evaluation result:', jsResult);
-
   } catch (error) {
     console.error('❌ Demo error:', error);
   } finally {

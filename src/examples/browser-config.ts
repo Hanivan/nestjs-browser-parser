@@ -27,14 +27,15 @@ async function demonstrateBrowserConfiguration() {
       timeout: 15000,
     });
 
-    console.log(`✅ Built-in browser success: ${response.status} ${response.statusText}`);
+    console.log(
+      `✅ Built-in browser success: ${response.status} ${response.statusText}`,
+    );
     console.log(`📄 Content length: ${response.html.length} characters`);
-    
+
     const pageInfo = builtinParser.extractStructuredFromHtml(response.html, {
-      title: { selector: 'title', type: 'css' }
+      title: { selector: 'title', type: 'css' },
     });
     console.log(`📋 Page title: ${pageInfo.title}`);
-
   } catch (error) {
     console.error(`❌ Built-in browser error: ${error.message}`);
   } finally {
@@ -68,12 +69,13 @@ async function demonstrateBrowserConfiguration() {
   });
 
   try {
-    console.log('🔧 Testing alternative Chrome executable (/usr/bin/google-chrome)...');
+    console.log(
+      '🔧 Testing alternative Chrome executable (/usr/bin/google-chrome)...',
+    );
     console.log('📝 Note: This may fail if Google Chrome is not installed');
-    
+
     // This will likely fail in most environments, but shows the configuration
     console.log('⚠️ Skipping alternative Chrome test (may not be installed)');
-    
   } catch (error) {
     console.error(`❌ Custom Chrome error: ${error.message}`);
   } finally {
@@ -86,8 +88,12 @@ async function demonstrateBrowserConfiguration() {
 
   console.log('📝 CDP Configuration Info:');
   console.log('   To use CDP, start Chrome with:');
-  console.log('   google-chrome --remote-debugging-port=9222 --no-first-run --no-default-browser-check');
-  console.log('   Then the parser can connect to: ws://localhost:9222/devtools/browser');
+  console.log(
+    '   google-chrome --remote-debugging-port=9222 --no-first-run --no-default-browser-check',
+  );
+  console.log(
+    '   Then the parser can connect to: ws://localhost:9222/devtools/browser',
+  );
 
   const cdpParser = new JSParserService({
     loggerLevel: ['log', 'error', 'debug'],
@@ -100,11 +106,14 @@ async function demonstrateBrowserConfiguration() {
 
   try {
     console.log('🔗 Testing CDP connection...');
-    console.log('📝 Note: This will fail unless Chrome is running with remote debugging');
-    
+    console.log(
+      '📝 Note: This will fail unless Chrome is running with remote debugging',
+    );
+
     // This will likely fail unless Chrome is running with remote debugging
-    console.log('⚠️ Skipping CDP test (Chrome likely not running with remote debugging)');
-    
+    console.log(
+      '⚠️ Skipping CDP test (Chrome likely not running with remote debugging)',
+    );
   } catch (error) {
     console.error(`❌ CDP connection error: ${error.message}`);
   } finally {
@@ -116,18 +125,23 @@ async function demonstrateBrowserConfiguration() {
   console.log('===================================');
 
   const envBasedConfig: JSParserModuleConfig = {
-    loggerLevel: process.env.NODE_ENV === 'development' ? (['debug', 'log', 'error'] as LogLevel[]) : (['error'] as LogLevel[]),
+    loggerLevel:
+      process.env.NODE_ENV === 'development'
+        ? (['debug', 'log', 'error'] as LogLevel[])
+        : (['error'] as LogLevel[]),
     headless: process.env.HEADLESS !== 'false',
-    browserConnection: process.env.USE_CDP === 'true' 
-      ? { 
-          type: 'cdp' as const, 
-          cdpUrl: process.env.CDP_URL || 'ws://localhost:9222/devtools/browser' 
-        }
-      : { 
-          type: 'builtin' as const,
-          executablePath: '/usr/bin/chromium',
-          args: ['--no-sandbox', '--disable-dev-shm-usage'],
-        },
+    browserConnection:
+      process.env.USE_CDP === 'true'
+        ? {
+            type: 'cdp' as const,
+            cdpUrl:
+              process.env.CDP_URL || 'ws://localhost:9222/devtools/browser',
+          }
+        : {
+            type: 'builtin' as const,
+            executablePath: '/usr/bin/chromium',
+            args: ['--no-sandbox', '--disable-dev-shm-usage'],
+          },
   };
 
   console.log('🌍 Environment-based configuration:');
@@ -135,7 +149,9 @@ async function demonstrateBrowserConfiguration() {
   console.log(`   HEADLESS: ${process.env.HEADLESS || 'not set'}`);
   console.log(`   USE_CDP: ${process.env.USE_CDP || 'not set'}`);
   console.log(`   CDP_URL: ${process.env.CDP_URL || 'not set'}`);
-  console.log(`   Config type: ${envBasedConfig.browserConnection?.type || 'builtin'}`);
+  console.log(
+    `   Config type: ${envBasedConfig.browserConnection?.type || 'builtin'}`,
+  );
   console.log(`   Headless: ${envBasedConfig.headless}`);
 
   const envParser = new JSParserService(envBasedConfig);
@@ -147,7 +163,6 @@ async function demonstrateBrowserConfiguration() {
     });
 
     console.log(`✅ Environment config success: ${response.status}`);
-    
   } catch (error) {
     console.error(`❌ Environment config error: ${error.message}`);
   } finally {
@@ -184,7 +199,9 @@ async function demonstrateBrowserConfiguration() {
   console.log('📋 Use Cases and Recommendations:');
   console.log('');
   console.log('🐳 Docker/Containers:');
-  console.log('  → Use built-in browser with executablePath: "/usr/bin/chromium"');
+  console.log(
+    '  → Use built-in browser with executablePath: "/usr/bin/chromium"',
+  );
   console.log('  → Include --no-sandbox and --disable-dev-shm-usage args');
   console.log('  → Set headless: true');
   console.log('  → Use minimal args for better compatibility');
@@ -231,15 +248,21 @@ async function demonstrateBrowserConfiguration() {
   ];
 
   console.log('🔧 Advanced Chrome launch options:');
-  advancedOptions.forEach(option => {
+  advancedOptions.forEach((option) => {
     console.log(`   ${option}`);
   });
 
   console.log('\n✅ Browser configuration demonstration completed!');
   console.log('\n📚 Additional Resources:');
-  console.log('   Chrome DevTools Protocol: https://chromedevtools.github.io/devtools-protocol/');
-  console.log('   Playwright Configuration: https://playwright.dev/docs/test-configuration');
-  console.log('   Chrome Flags: https://peter.sh/experiments/chromium-command-line-switches/');
+  console.log(
+    '   Chrome DevTools Protocol: https://chromedevtools.github.io/devtools-protocol/',
+  );
+  console.log(
+    '   Playwright Configuration: https://playwright.dev/docs/test-configuration',
+  );
+  console.log(
+    '   Chrome Flags: https://peter.sh/experiments/chromium-command-line-switches/',
+  );
 }
 
 // Export the demo function

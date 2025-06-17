@@ -16,7 +16,7 @@ export class ExampleService {
       });
 
       const pageInfo = this.jsParser.extractStructuredFromHtml(response.html, {
-        title: { selector: 'title', type: 'css' }
+        title: { selector: 'title', type: 'css' },
       });
       console.log('📄 Page Title:', pageInfo.title);
       console.log('🌐 Final URL:', response.url);

@@ -1,5 +1,6 @@
 import { JSParserService } from '../js-parser.service';
 import { ExtractionSchema } from '../types';
+import { Page, BrowserContext } from 'playwright-core';
 
 // Define typed interfaces based on actual Amazon HTML structure
 interface AmazonProductReal {
@@ -46,8 +47,13 @@ async function demonstrateAmazonRealSearch() {
     const searchQueries = ['laptop', 'smartphone samsung', 'nike shoes'];
 
     for (const query of searchQueries.slice(0, 1)) {
-      // Test with first query
-      await performAmazonSearch(parser, query);
+      // Test with first query - try page control method first
+      try {
+        await performAmazonSearchWithPageControl(parser, query);
+      } catch (error) {
+        console.log('🔄 Page control method failed, trying direct search...');
+        await performDirectAmazonSearch(parser, query);
+      }
 
       // Wait between searches to be respectful
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -59,224 +65,121 @@ async function demonstrateAmazonRealSearch() {
   }
 }
 
-async function performAmazonSearch(
+async function performAmazonSearchWithPageControl(
   parser: JSParserService,
   searchQuery: string,
 ) {
-  console.log(`\n🔍 Performing real search for: "${searchQuery}"`);
+  console.log(
+    `\n🔍 Performing Amazon search with page control for: "${searchQuery}"`,
+  );
   console.log('='.repeat(50));
 
+  let page: Page | null = null;
+  let context: BrowserContext | null = null;
+
   try {
-    // Step 1: Navigate to Amazon homepage
+    // Step 1: Open Amazon and get page control
     console.log('📱 Step 1: Opening Amazon homepage...');
-    const homepageResponse = await parser.fetchHtml('https://amazon.com/', {
-      timeout: 30000,
-      waitForTimeout: 3000,
-      waitUntil: 'load',
+    const { page: amazonPage, context: amazonContext } = await parser.getPage(
+      'https://amazon.com/',
+      {
+        timeout: 30000,
+        waitForTimeout: 3000,
+        waitUntil: 'load',
+      },
+    );
+
+    page = amazonPage;
+    context = amazonContext;
+
+    console.log(`✅ Amazon page opened - you now have control!`);
+    console.log(`📄 Current URL: ${page?.url()}`);
+    console.log(`📋 Page Title: ${await page?.title()}`);
+
+    // Step 2: Perform search and extract results
+    if (page) {
+      await performSearchOnOpenPage(page, searchQuery);
+    }
+
+    // Extract and display results
+    console.log('\n📦 Extracting product data...');
+    const html = await page?.content();
+    if (html) {
+      await extractProductsFromCurrentPage(parser, html, searchQuery);
+    }
+
+    // Page remains open for user interaction
+    console.log('\n🎯 Page is still open for your interaction!');
+    console.log('💡 You can:');
+    console.log('   - Scroll through results');
+    console.log('   - Click on products');
+    console.log('   - Refine search filters');
+    console.log(
+      '   - Manually close when done with: await parser.closePage(page, context)',
+    );
+
+    // Simulate keeping page open (in real usage, user controls this)
+    console.log('\n⏳ Keeping page open for 10 seconds...');
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+  } catch (error) {
+    console.error(`❌ Error in search with page control:`, error.message);
+  } finally {
+    // Clean up when done
+    if (page && context) {
+      console.log('\n🧹 Closing page and context...');
+      await parser.closePage(page, context);
+      console.log('✅ Page closed successfully');
+    }
+  }
+}
+
+async function performSearchOnOpenPage(page: Page, searchQuery: string) {
+  try {
+    console.log(`🔍 Searching for "${searchQuery}" on open page...`);
+
+    // Wait for search input to be available
+    await page.waitForSelector('#twotabsearchtextbox, input[type="text"]', {
+      timeout: 10000,
     });
 
-    console.log(
-      `✅ Homepage loaded: ${homepageResponse.status} ${homepageResponse.statusText}`,
-    );
+    // Clear and type in the search input
+    const searchInput = page.locator('#twotabsearchtextbox').first();
+    await searchInput.clear();
+    await searchInput.fill(searchQuery);
 
-    // Check if we're redirected to captcha or login page
-    const isBlocked = await checkForAmazonBlocking(homepageResponse.html);
+    console.log(`Filled search input with: ${searchQuery}`);
 
-    if (isBlocked) {
-      console.log(
-        '🔒 Detected blocking/captcha page, using alternative search URL...',
-      );
-      await performDirectAmazonSearch(parser, searchQuery);
-      return;
+    // Wait a moment for any autocomplete
+    await page.waitForTimeout(1000);
+
+    // Click the search button or press Enter
+    try {
+      const searchButton = page
+        .locator('#nav-search-submit-button, input[type="submit"]')
+        .first();
+      await searchButton.click();
+      console.log('Clicked search button');
+    } catch (buttonError) {
+      await searchInput.press('Enter');
+      console.log('Pressed Enter on search input');
     }
 
-    // Step 2: Use JavaScript evaluation to perform search
-    console.log(`🔍 Step 2: Searching for "${searchQuery}"...`);
+    // Wait for search results to load
+    console.log('Waiting for search results...');
+    await page.waitForTimeout(5000);
 
-    const searchResult = await parser.evaluateOnPage(
-      'https://amazon.com/',
-      async (page) => {
-        // Wait for page to load
-        await page.waitForLoadState('load');
-
-        console.log('Page loaded, looking for search input...');
-
-        // Check if we're on captcha or blocking page after page load
-        const pageContent = await page.content();
-        if (
-          pageContent.includes('Enter the characters you see below') ||
-          pageContent.includes(
-            "Sorry, we just need to make sure you're not a robot",
-          ) ||
-          pageContent.includes(
-            'To continue shopping, please type the characters',
-          )
-        ) {
-          console.log('Detected Amazon blocking/captcha page after page load');
-          return {
-            url: page.url(),
-            title: await page.title(),
-            success: false,
-            blocked: true,
-          };
-        }
-
-        // Check if Amazon search form is present
-        try {
-          const searchForm = page.locator(
-            '#nav-search-bar-form, form[role="search"]',
-          );
-          const formExists = (await searchForm.count()) > 0;
-
-          if (!formExists) {
-            console.log('Amazon search form not found, likely blocked');
-            return {
-              url: page.url(),
-              title: await page.title(),
-              success: false,
-              blocked: true,
-            };
-          }
-        } catch (formCheckError) {
-          console.log('Could not check for search form, continuing...');
-        }
-
-        // Wait for search input to be available
-        await page.waitForSelector('#twotabsearchtextbox, input[type="text"]', {
-          timeout: 10000,
-        });
-
-        // Clear and type in the search input
-        const searchInput = page.locator('#twotabsearchtextbox').first();
-        await searchInput.clear();
-        await searchInput.fill(searchQuery);
-
-        console.log(`Filled search input with: ${searchQuery}`);
-
-        // Wait a moment for any autocomplete
-        await page.waitForTimeout(1000);
-
-        // Click the search button or press Enter
-        try {
-          // Try clicking the search button first
-          const searchButton = page
-            .locator('#nav-search-submit-button, input[type="submit"]')
-            .first();
-          await searchButton.click();
-          console.log('Clicked search button');
-        } catch (buttonError) {
-          // Fallback to pressing Enter
-          await searchInput.press('Enter');
-          console.log('Pressed Enter on search input');
-        }
-
-        // Wait for search results to load
-        console.log('Waiting for search results...');
-        await page.waitForTimeout(5000);
-
-        // Check if redirected to captcha after search
-        const currentContent = await page.content();
-        if (
-          currentContent.includes('Enter the characters you see below') ||
-          currentContent.includes(
-            "Sorry, we just need to make sure you're not a robot",
-          )
-        ) {
-          console.log('Redirected to captcha page after search attempt');
-          return {
-            url: page.url(),
-            title: await page.title(),
-            success: false,
-            blocked: true,
-          };
-        }
-
-        // Wait for product items to appear
-        try {
-          await page.waitForSelector(
-            '[data-component-type="s-search-result"], .s-result-item',
-            {
-              timeout: 15000,
-            },
-          );
-          console.log('Search results container found');
-        } catch (waitError) {
-          console.log('Search results container not found, continuing...');
-        }
-
-        // Get the current URL and page content
-        const currentUrl = page.url();
-        const pageTitle = await page.title();
-
-        return {
-          url: currentUrl,
-          title: pageTitle,
-          success: true,
-          blocked: false,
-        };
-      },
-      { timeout: 60000 },
-    );
-
-    if (searchResult && searchResult.blocked) {
-      console.log('🔒 Search was blocked/captcha, using alternative method...');
-      await performDirectAmazonSearch(parser, searchQuery);
-      return;
-    }
-
-    if (searchResult && searchResult.success) {
-      console.log(`✅ Search completed successfully`);
-      console.log(`📄 Current URL: ${searchResult.url}`);
-      console.log(`📋 Page Title: ${searchResult.title}`);
-
-      // Step 3: Extract product data from search results
-      console.log('\n📦 Step 3: Extracting product data...');
-      await extractProductsFromAmazonResults(
-        parser,
-        searchResult.url,
-        searchQuery,
-      );
-    } else {
-      console.log('❌ Search may not have completed successfully');
+    // Wait for product items to appear
+    try {
+      await page.waitForSelector('div[data-component-type="s-search-result"]', {
+        timeout: 15000,
+      });
+      console.log('✅ Search results loaded successfully');
+    } catch (waitError) {
+      console.log('⚠️ Search results container not found, but continuing...');
     }
   } catch (error) {
-    console.error(
-      `❌ Error performing search for "${searchQuery}":`,
-      error.message,
-    );
-
-    // Check if error might be due to blocking
-    if (
-      error.message.includes('timeout') ||
-      error.message.includes('navigation')
-    ) {
-      console.log(
-        '🔄 Error might be due to blocking, trying alternative method...',
-      );
-      await performDirectAmazonSearch(parser, searchQuery);
-      return;
-    }
-
-    // Try to extract any available information
-    try {
-      console.log('\n🔄 Attempting to get current page information...');
-      const fallbackResult = await parser.evaluateOnPage(
-        'https://amazon.com/',
-        async (page) => {
-          return {
-            url: page.url(),
-            title: await page.title(),
-            content: (await page.content()).substring(0, 500) + '...',
-          };
-        },
-      );
-
-      console.log('📋 Current page info:');
-      console.log(`   URL: ${fallbackResult?.url}`);
-      console.log(`   Title: ${fallbackResult?.title}`);
-    } catch (fallbackError) {
-      console.log('❌ Could not get fallback information');
-    }
+    console.error('❌ Error performing search on open page:', error.message);
+    throw error;
   }
 }
 
@@ -339,9 +242,9 @@ async function performDirectAmazonSearch(
 
     // Extract products from the direct search results
     console.log('\n📦 Extracting products from direct search...');
-    await extractProductsFromAmazonResults(
+    await extractProductsFromCurrentPage(
       parser,
-      directSearchUrl,
+      searchResponse.html,
       searchQuery,
     );
   } catch (error) {
@@ -349,22 +252,13 @@ async function performDirectAmazonSearch(
   }
 }
 
-async function extractProductsFromAmazonResults(
+async function extractProductsFromCurrentPage(
   parser: JSParserService,
-  searchUrl: string,
+  html: string,
   searchQuery: string,
 ) {
   try {
-    // Fetch the current search results page
-    const response = await parser.fetchHtml(searchUrl, {
-      timeout: 30000,
-      waitForTimeout: 3000,
-      waitUntil: 'load',
-    });
-
-    console.log(
-      `📄 Search results page loaded: ${response.html.length} characters`,
-    );
+    console.log(`📄 Extracting from current page: ${html.length} characters`);
 
     // Extract products using Amazon's HTML structure
     const productSchema: ExtractionSchema<{
@@ -391,27 +285,30 @@ async function extractProductsFromAmazonResults(
         transform: (names: string[]) =>
           names
             .map((name) => name.trim())
-            .filter((name) => 
-              name.length > 5 && 
-              name.length < 300 &&
-              !name.includes('Sponsored') &&
-              !name.includes('function') &&
-              !name.includes('window.') &&
-              !name.includes('P.now') &&
-              !name.includes('JavaScript') &&
-              !name.includes('AmazonUIPageJS')
+            .filter(
+              (name) =>
+                name.length > 5 &&
+                name.length < 300 &&
+                !name.includes('Sponsored') &&
+                !name.includes('function') &&
+                !name.includes('window.') &&
+                !name.includes('P.now') &&
+                !name.includes('JavaScript') &&
+                !name.includes('AmazonUIPageJS'),
             ),
       },
       productPrices: {
-        selector: 'div[data-component-type="s-search-result"] .a-price .a-offscreen',
+        selector:
+          'div[data-component-type="s-search-result"] .a-price .a-offscreen',
         type: 'css',
         multiple: true,
         transform: (prices: string[]) =>
           prices
-            .filter((price) => 
-              price.trim().length > 0 && 
-              price.includes('$') &&
-              /^\$[\d,]+\.?\d*$/.test(price.trim())
+            .filter(
+              (price) =>
+                price.trim().length > 0 &&
+                price.includes('$') &&
+                /^\$[\d,]+\.?\d*$/.test(price.trim()),
             )
             .map((price) => price.replace('$', '')),
       },
@@ -422,16 +319,17 @@ async function extractProductsFromAmazonResults(
         transform: (descriptions: string[]) =>
           descriptions
             .map((desc) => desc.trim())
-            .filter((desc) => 
-              desc.length > 20 && 
-              desc.length < 500 &&
-              !desc.match(/^\d+$/) &&
-              !desc.includes('JavaScript') &&
-              !desc.includes('window.') &&
-              !desc.includes('function') &&
-              !desc.includes('P.now') &&
-              !desc.includes('Sponsored') &&
-              desc.includes(' ')  // Must contain spaces (indicating it's a description)
+            .filter(
+              (desc) =>
+                desc.length > 20 &&
+                desc.length < 500 &&
+                !desc.match(/^\d+$/) &&
+                !desc.includes('JavaScript') &&
+                !desc.includes('window.') &&
+                !desc.includes('function') &&
+                !desc.includes('P.now') &&
+                !desc.includes('Sponsored') &&
+                desc.includes(' '), // Must contain spaces (indicating it's a description)
             )
             .slice(0, 20),
       },
@@ -462,17 +360,18 @@ async function extractProductsFromAmazonResults(
         transform: (ratings: string[]) =>
           ratings
             .map((rating) => rating.match(/(\d+\.?\d*) out of/)?.[1])
-            .filter((rating) => rating !== undefined) as string[],
+            .filter((rating) => rating !== undefined),
       },
       productReviews: {
-        selector: 'div[data-component-type="s-search-result"] a[aria-label*="ratings"]',
+        selector:
+          'div[data-component-type="s-search-result"] a[aria-label*="ratings"]',
         type: 'css',
         attribute: 'aria-label',
         multiple: true,
         transform: (reviews: string[]) =>
           reviews
             .map((review) => review.match(/(\d+(?:,\d+)*)\s+ratings?/)?.[1])
-            .filter((review) => review !== undefined) as string[],
+            .filter((review) => review !== undefined),
       },
       productPrimes: {
         selector: 'div[data-component-type="s-search-result"] .a-icon-prime',
@@ -482,10 +381,7 @@ async function extractProductsFromAmazonResults(
       },
     };
 
-    const extractedData = parser.extractStructuredFromHtml(
-      response.html,
-      productSchema,
-    );
+    const extractedData = parser.extractStructuredFromHtml(html, productSchema);
 
     console.log(`📊 Extraction results:`);
     console.log(
@@ -519,7 +415,7 @@ async function extractProductsFromAmazonResults(
       displayAmazonProductResults(products, searchQuery);
     } else {
       console.log('\n⚠️ No products found. Trying alternative extraction...');
-      await alternativeAmazonExtraction(parser, response.html);
+      await alternativeAmazonExtraction(parser, html);
     }
   } catch (error) {
     console.error('❌ Error extracting products:', error.message);
@@ -631,17 +527,19 @@ async function alternativeAmazonExtraction(
         items.filter((item) => item.trim().length > 0).slice(0, 10),
     },
     allPriceElements: {
-      selector: '.a-price .a-offscreen, .a-price-whole, [class*="a-price"]:not(script)',
+      selector:
+        '.a-price .a-offscreen, .a-price-whole, [class*="a-price"]:not(script)',
       type: 'css',
       multiple: true,
       transform: (prices: string[]) =>
         prices
-          .filter((price) => 
-            price.includes('$') && 
-            price.length < 20 &&
-            !price.includes('function') &&
-            !price.includes('window') &&
-            /^\$[\d,]+\.?\d*$/.test(price.trim())
+          .filter(
+            (price) =>
+              price.includes('$') &&
+              price.length < 20 &&
+              !price.includes('function') &&
+              !price.includes('window') &&
+              /^\$[\d,]+\.?\d*$/.test(price.trim()),
           )
           .slice(0, 10),
     },

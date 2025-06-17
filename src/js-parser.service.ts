@@ -1,6 +1,12 @@
 import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import * as cheerio from 'cheerio';
-import { Browser, BrowserContext, chromium, Page } from 'playwright-core';
+import {
+  Browser,
+  BrowserContext,
+  chromium,
+  Page,
+  Response,
+} from 'playwright-core';
 import { JS_PARSER_CONFIG, JSParserModuleConfig } from './js-parser.config';
 import {
   ExtractionOptions,
@@ -62,7 +68,7 @@ export class JSParserService implements OnModuleDestroy {
   private logWithLevel(
     level: LogLevel,
     message: string,
-    ...optionalParams: any[]
+    ...optionalParams: unknown[]
   ): void {
     if (this.shouldLog(level)) {
       switch (level) {
@@ -117,7 +123,9 @@ export class JSParserService implements OnModuleDestroy {
     return this.browser;
   }
 
-  async createContext(options?: any): Promise<BrowserContext> {
+  async createContext(
+    options?: Record<string, unknown>,
+  ): Promise<BrowserContext> {
     const browser = await this.getBrowser();
     const context = await browser.newContext({
       viewport: this.config.defaultViewport || { width: 1920, height: 1080 },
@@ -133,14 +141,18 @@ export class JSParserService implements OnModuleDestroy {
     return context;
   }
 
-  async fetchHtml(
+  async getPage(
     url: string,
     options?: JSParserOptions,
-  ): Promise<JSParseResponse> {
+  ): Promise<{
+    page: Page;
+    context: BrowserContext;
+    response: Response | null;
+  }> {
     const verbose = options?.verbose ?? false;
 
     if (verbose) {
-      this.logWithLevel('debug', `🌐 Fetching URL with JS: ${url}`);
+      this.logWithLevel('debug', `🌐 Opening page: ${url}`);
     }
 
     const context = await this.createContext({
@@ -160,43 +172,55 @@ export class JSParserService implements OnModuleDestroy {
       forcedColors: options?.forcedColors,
     });
 
-    let page: Page | null = null;
+    const page = await context.newPage();
+
+    const navigationOptions: NavigationOptions = {
+      timeout: options?.timeout || this.config.defaultTimeout || 30000,
+      waitUntil: options?.waitUntil || 'networkidle',
+    };
+
+    const startTime = Date.now();
+    const response = await page.goto(url, navigationOptions);
+
+    if (!response) {
+      throw new Error('Failed to navigate to page');
+    }
+
+    if (options?.waitForSelector) {
+      await page.waitForSelector(options.waitForSelector, {
+        timeout: options?.waitForTimeout || 5000,
+      });
+    } else if (options?.waitForTimeout) {
+      await page.waitForTimeout(options.waitForTimeout);
+    }
+
+    const endTime = Date.now();
+
+    if (verbose) {
+      this.logWithLevel(
+        'debug',
+        `✅ Successfully opened ${url} in ${endTime - startTime}ms`,
+      );
+    }
+
+    return { page, context, response };
+  }
+
+  async fetchHtml(
+    url: string,
+    options?: JSParserOptions,
+  ): Promise<JSParseResponse> {
+    const { page, context, response } = await this.getPage(url, options);
 
     try {
-      page = await context.newPage();
-
-      const navigationOptions: NavigationOptions = {
-        timeout: options?.timeout || this.config.defaultTimeout || 30000,
-        waitUntil: options?.waitUntil || 'networkidle',
-      };
-
-      const startTime = Date.now();
-      const response = await page.goto(url, navigationOptions);
-
-      if (!response) {
-        throw new Error('Failed to navigate to page');
-      }
-
-      if (options?.waitForSelector) {
-        await page.waitForSelector(options.waitForSelector, {
-          timeout: options?.waitForTimeout || 5000,
-        });
-      } else if (options?.waitForTimeout) {
-        await page.waitForTimeout(options.waitForTimeout);
-      }
-
       const html = await page.content();
       const cookies = await context.cookies();
-      const responseHeaders = response.headers();
 
-      const endTime = Date.now();
-
-      if (verbose) {
-        this.logWithLevel(
-          'debug',
-          `✅ Successfully fetched ${url} in ${endTime - startTime}ms`,
-        );
+      if (!response) {
+        throw new Error('No response available');
       }
+
+      const responseHeaders = response.headers();
 
       const result: JSParseResponse = {
         html,
@@ -215,17 +239,15 @@ export class JSParserService implements OnModuleDestroy {
           sameSite: cookie.sameSite,
         })),
         timing: {
-          requestStart: startTime,
-          responseStart: startTime + 100, // Approximation
-          responseEnd: endTime,
+          requestStart: Date.now(),
+          responseStart: Date.now(),
+          responseEnd: Date.now(),
         },
       };
 
       return result;
     } finally {
-      if (page) {
-        await page.close();
-      }
+      await page.close();
       await context.close();
     }
   }
@@ -336,7 +358,7 @@ export class JSParserService implements OnModuleDestroy {
 
       return await page.pdf({
         path: options?.path,
-        format: options?.format as any,
+        format: options?.format as 'A4' | 'Letter' | undefined,
         printBackground: options?.printBackground,
         margin: options?.margin,
       });
@@ -348,22 +370,14 @@ export class JSParserService implements OnModuleDestroy {
     }
   }
 
-  async evaluateOnPage<T = any>(
+  async evaluateOnPage<T = unknown>(
     url: string,
     evaluationFunction: string | ((page: Page) => Promise<T>),
     options?: JSParserOptions,
   ): Promise<T | null> {
-    const context = await this.createContext();
-    let page: Page | null = null;
+    const { page, context } = await this.getPage(url, options);
 
     try {
-      page = await context.newPage();
-      await page.goto(url, { timeout: options?.timeout || 30000 });
-
-      if (options?.waitForSelector) {
-        await page.waitForSelector(options.waitForSelector);
-      }
-
       if (typeof evaluationFunction === 'string') {
         return await page.evaluate(evaluationFunction);
       } else {
@@ -375,10 +389,23 @@ export class JSParserService implements OnModuleDestroy {
       }
       return null;
     } finally {
-      if (page) {
+      await page.close();
+      await context.close();
+    }
+  }
+
+  async closePage(page: Page, context: BrowserContext): Promise<void> {
+    try {
+      if (page && !page.isClosed()) {
         await page.close();
       }
-      await context.close();
+      if (context && !context.browser()?.isConnected()) {
+        await context.close();
+      }
+    } catch (error) {
+      if (this.shouldLog('error')) {
+        this.logWithLevel('error', 'Error closing page:', error);
+      }
     }
   }
 
@@ -403,7 +430,14 @@ export class JSParserService implements OnModuleDestroy {
 
     for (const [key, config] of Object.entries(schema)) {
       try {
-        const fieldConfig = config as any;
+        const fieldConfig = config as {
+          type?: string;
+          multiple?: boolean;
+          selector: string;
+          attribute?: string;
+          raw?: boolean;
+          transform?: TransformType;
+        };
 
         // Skip evaluate type in HTML-only mode
         if (fieldConfig.type === 'evaluate') {
@@ -420,7 +454,7 @@ export class JSParserService implements OnModuleDestroy {
         // Determine selector type (default to css)
         const selectorType = fieldConfig.type || 'css';
 
-        let value: any;
+        let value: unknown;
 
         // Inline extraction logic
         if (selectorType === 'xpath') {
@@ -482,7 +516,7 @@ export class JSParserService implements OnModuleDestroy {
         if (this.shouldLog('error')) {
           this.logWithLevel('error', `Error extracting field '${key}':`, error);
         }
-        const fieldConfig = config as any;
+        const fieldConfig = config as { multiple?: boolean };
         result[key] = fieldConfig.multiple ? [] : null;
       }
     }
@@ -494,7 +528,7 @@ export class JSParserService implements OnModuleDestroy {
    * Apply transformation to extracted values
    * Supports functions, objects with transform method, classes, and arrays of transforms
    */
-  private applyTransform(value: any, transform: TransformType): any {
+  private applyTransform(value: unknown, transform: TransformType): unknown {
     if (!transform) return value;
 
     // Handle array of transforms - apply in sequence
@@ -513,9 +547,13 @@ export class JSParserService implements OnModuleDestroy {
     }
 
     // Handle transform class - instantiate and call transform
-    if (typeof transform === 'function' && (transform as any).prototype) {
+    if (typeof transform === 'function') {
       try {
-        const instance = new (transform as any)();
+        // Try to instantiate as a class
+        const TransformClass = transform as new () => {
+          transform: (value: unknown) => unknown;
+        };
+        const instance = new TransformClass();
         if (instance && typeof instance.transform === 'function') {
           return instance.transform(value);
         }
