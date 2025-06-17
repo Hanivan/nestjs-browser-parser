@@ -17,7 +17,7 @@
  *
  * ## Quick Start
  * ```typescript
- * import { JSParserModule, JSParserService } from 'nestjs-js-parser';
+ * import { JSParserModule, JSParserService } from 'nestjs-browser-parser';
  *
  * // In your module
  * @Module({

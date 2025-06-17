@@ -1,5 +1,5 @@
 {
-  "name": "nestjs-js-parser",
+  "name": "nestjs-browser-parser",
   "version": "0.0.1",
   "description": "A powerful NestJS module for parsing HTML content with JavaScript support using Playwright Core",
   "author": "Hanivan Rizky Sobari <hanivan20@gmail.com>",
