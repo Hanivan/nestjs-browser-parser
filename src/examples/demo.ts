@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
 import { Module } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { JSParserModule, JSParserService } from '../index';
 
 @Module({
