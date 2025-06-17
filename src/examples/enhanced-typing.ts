@@ -394,7 +394,7 @@ async function demonstrateEnhancedTyping() {
       console.log(`⚠️ Could not extract shop item: ${error.message}`);
     }
 
-    console.log('\n✅ Enhanced TypeScript typing demonstration completed!');
+    console.log('\n🎉 Enhanced TypeScript typing demonstration completed!');
     console.log('\n🎯 Key Benefits Demonstrated:');
     console.log('   • Full type safety with generic interfaces');
     console.log('   • Transform function type checking');
@@ -414,7 +414,7 @@ export { demonstrateEnhancedTyping };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateEnhancedTyping()
-    .then(() => console.log('\n🎉 Demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', error.message));
+  demonstrateEnhancedTyping().catch((error) =>
+    console.error('\n💥 Demo failed:', error.message),
+  );
 }

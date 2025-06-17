@@ -266,7 +266,7 @@ async function demonstrateJavaScriptEvaluation() {
       console.log('   ✅ Error handling working correctly');
     }
 
-    console.log('\n✅ JavaScript evaluation demonstration completed!');
+    console.log('\n🎉 JavaScript evaluation demonstration completed!');
   } catch (error) {
     console.error(
       '❌ Error demonstrating JavaScript evaluation:',
@@ -282,7 +282,7 @@ export { demonstrateJavaScriptEvaluation };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateJavaScriptEvaluation()
-    .then(() => console.log('\n🎉 Demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', error.message));
+  demonstrateJavaScriptEvaluation().catch((error) =>
+    console.error('\n💥 Demo failed:', error.message),
+  );
 }

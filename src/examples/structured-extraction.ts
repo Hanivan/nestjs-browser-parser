@@ -422,7 +422,7 @@ async function demonstrateStructuredExtraction() {
       `   Total text length: ${performanceData.totalTextLength} chars`,
     );
 
-    console.log('\n✅ Structured extraction demonstration completed!');
+    console.log('\n🎉 Structured extraction demonstration completed!');
   } catch (error) {
     console.error(
       '❌ Error demonstrating structured extraction:',
@@ -438,7 +438,7 @@ export { demonstrateStructuredExtraction };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateStructuredExtraction()
-    .then(() => console.log('\n🎉 Demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', error.message));
+  demonstrateStructuredExtraction().catch((error) =>
+    console.error('\n💥 Demo failed:', error.message),
+  );
 }

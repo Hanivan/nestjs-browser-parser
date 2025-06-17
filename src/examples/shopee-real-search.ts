@@ -50,6 +50,8 @@ async function demonstrateShopeeRealSearch() {
       // Wait between searches to be respectful
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
+
+    console.log('\n🎉 Real Shopee search demo completed!');
   } catch (error) {
     console.error('❌ Error demonstrating real Shopee search:', error.message);
   } finally {
@@ -368,7 +370,7 @@ async function extractProductsFromSearchResults(
 
     // Extract products using the actual HTML structure from your examples
     const productSchema: ExtractionSchema<{
-      products: any[];
+      products: unknown[];
       productNames: string[];
       productPrices: string[];
       productImages: string[];
@@ -501,7 +503,16 @@ async function extractProductsFromSearchResults(
   }
 }
 
-function combineProductData(extractedData: any): ShopeeProductReal[] {
+function combineProductData(extractedData: {
+  productNames: string[];
+  productPrices: string[];
+  productImages: string[];
+  productUrls: string[];
+  productLocations: string[];
+  productRatings: string[];
+  productDiscounts: string[];
+  productVouchers: string[];
+}): ShopeeProductReal[] {
   const products: ShopeeProductReal[] = [];
   const maxLength = Math.max(
     extractedData.productNames.length,
@@ -663,7 +674,7 @@ export { demonstrateShopeeRealSearch };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateShopeeRealSearch()
-    .then(() => console.log('\n🎉 Real Shopee search demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', error.message));
+  demonstrateShopeeRealSearch().catch((error) =>
+    console.error('\n💥 Demo failed:', error.message),
+  );
 }

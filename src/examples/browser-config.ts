@@ -1,6 +1,6 @@
+import { JSParserModuleConfig } from '../js-parser.config';
 import { JSParserService } from '../js-parser.service';
 import { LogLevel } from '../types';
-import { JSParserModuleConfig } from '../js-parser.config';
 
 async function demonstrateBrowserConfiguration() {
   console.log('🚀 NestJS JS Parser - Browser Configuration Demo\n');
@@ -263,6 +263,8 @@ async function demonstrateBrowserConfiguration() {
   console.log(
     '   Chrome Flags: https://peter.sh/experiments/chromium-command-line-switches/',
   );
+
+  console.log('\n🎉 Browser configuration demonstration completed!');
 }
 
 // Export the demo function
@@ -270,7 +272,7 @@ export { demonstrateBrowserConfiguration };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateBrowserConfiguration()
-    .then(() => console.log('\n🎉 Demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', error.message));
+  demonstrateBrowserConfiguration().catch((error) =>
+    console.error('\n💥 Demo failed:', error.message),
+  );
 }

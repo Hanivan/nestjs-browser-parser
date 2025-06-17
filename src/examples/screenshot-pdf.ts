@@ -226,7 +226,7 @@ async function demonstrateScreenshotPdf() {
       console.error(`❌ Monitoring error: ${error.message}`);
     }
 
-    console.log('\n✅ Screenshot and PDF demonstration completed!');
+    console.log('\n🎉 Screenshot and PDF demonstration completed!');
   } catch (error) {
     console.error('❌ Error demonstrating screenshot/PDF:', error.message);
   } finally {
@@ -239,7 +239,7 @@ export { demonstrateScreenshotPdf };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateScreenshotPdf()
-    .then(() => console.log('\n🎉 Demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', error.message));
+  demonstrateScreenshotPdf().catch((error) =>
+    console.error('\n💥 Demo failed:', error.message),
+  );
 }

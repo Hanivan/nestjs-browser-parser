@@ -1,7 +1,9 @@
 import {
   DynamicModule,
+  InjectionToken,
   Module,
   ModuleMetadata,
+  OptionalFactoryDependency,
   Provider,
   Type,
 } from '@nestjs/common';
@@ -17,9 +19,9 @@ export interface JSParserModuleAsyncOptions
   useExisting?: Type<JSParserConfigFactory>;
   useClass?: Type<JSParserConfigFactory>;
   useFactory?: (
-    ...args: any[]
+    ...args: unknown[]
   ) => Promise<JSParserModuleConfig> | JSParserModuleConfig;
-  inject?: any[];
+  inject?: (InjectionToken | OptionalFactoryDependency)[];
 }
 
 export interface JSParserConfigFactory {
@@ -67,7 +69,7 @@ export class JSParserModule {
       return [
         {
           provide: JS_PARSER_CONFIG,
-          useFactory: async (...args: any[]) => {
+          useFactory: async (...args: unknown[]) => {
             const config = await options.useFactory!(...args);
             return { ...defaultJSParserConfig, ...config };
           },

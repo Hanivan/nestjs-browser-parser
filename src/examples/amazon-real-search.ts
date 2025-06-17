@@ -1,6 +1,6 @@
+import { BrowserContext, Page } from 'playwright-core';
 import { JSParserService } from '../js-parser.service';
 import { ExtractionSchema } from '../types';
-import { Page, BrowserContext } from 'playwright-core';
 
 // Define typed interfaces based on actual Amazon HTML structure
 interface AmazonProductReal {
@@ -58,6 +58,8 @@ async function demonstrateAmazonRealSearch() {
       // Wait between searches to be respectful
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
+
+    console.log('\n🎉 Real Amazon search demo completed!');
   } catch (error) {
     console.error('❌ Error demonstrating real Amazon search:', error.message);
   } finally {
@@ -262,7 +264,7 @@ async function extractProductsFromCurrentPage(
 
     // Extract products using Amazon's HTML structure
     const productSchema: ExtractionSchema<{
-      products: any[];
+      products: unknown[];
       productNames: string[];
       productPrices: string[];
       productDescriptions: string[];
@@ -422,7 +424,16 @@ async function extractProductsFromCurrentPage(
   }
 }
 
-function combineAmazonProductData(extractedData: any): AmazonProductReal[] {
+function combineAmazonProductData(extractedData: {
+  productNames: string[];
+  productPrices: string[];
+  productImages: string[];
+  productUrls: string[];
+  productDescriptions: string[];
+  productRatings: string[];
+  productReviews: string[];
+  productPrimes: string[];
+}): AmazonProductReal[] {
   const products: AmazonProductReal[] = [];
   const maxLength = Math.max(
     extractedData.productNames.length,
@@ -584,7 +595,7 @@ export { demonstrateAmazonRealSearch };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateAmazonRealSearch()
-    .then(() => console.log('\n🎉 Real Amazon search demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', error.message));
+  demonstrateAmazonRealSearch().catch((error) =>
+    console.error('\n💥 Demo failed:', error.message),
+  );
 }

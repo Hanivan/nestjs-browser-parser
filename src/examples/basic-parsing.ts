@@ -183,7 +183,7 @@ async function demonstrateBasicParsing() {
     console.log(`   Total links: ${pageData.links?.length || 0}`);
     console.log(`   Total headings: ${pageData.headings?.length || 0}`);
 
-    console.log('\n✅ Basic parsing demonstration completed!');
+    console.log('\n🎉 Basic parsing demonstration completed!');
   } catch (error) {
     console.error('❌ Error demonstrating basic parsing:', error.message);
   } finally {
@@ -196,7 +196,7 @@ export { demonstrateBasicParsing };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateBasicParsing()
-    .then(() => console.log('\n🎉 Demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', error.message));
+  demonstrateBasicParsing().catch((error) =>
+    console.error('\n💥 Demo failed:', error.message),
+  );
 }

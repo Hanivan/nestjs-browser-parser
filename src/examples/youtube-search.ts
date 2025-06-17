@@ -1,6 +1,6 @@
+import { BrowserContext, Page } from 'playwright-core';
 import { JSParserService } from '../js-parser.service';
 import { ExtractionSchema } from '../types';
-import { Page, BrowserContext } from 'playwright-core';
 
 // Define typed interfaces for YouTube video data
 interface YouTubeVideo {
@@ -16,17 +16,22 @@ interface YouTubeVideo {
   isShort?: boolean;
 }
 
-
 async function demonstrateYouTubeSearch() {
   console.log('🎥 NestJS JS Parser - YouTube Search Demo\n');
 
   // Test with 3 different search keywords
-  const searchKeywords = ['javascript tutorial', 'nestjs guide', 'typescript basics'];
+  const searchKeywords = [
+    'javascript tutorial',
+    'nestjs guide',
+    'typescript basics',
+  ];
 
   for (let i = 0; i < searchKeywords.length; i++) {
     const keyword = searchKeywords[i];
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`🔍 Processing keyword ${i + 1}/${searchKeywords.length}: "${keyword}"`);
+    console.log(
+      `🔍 Processing keyword ${i + 1}/${searchKeywords.length}: "${keyword}"`,
+    );
     console.log(`${'='.repeat(60)}`);
 
     // Create new parser instance for each search
@@ -49,13 +54,16 @@ async function demonstrateYouTubeSearch() {
     try {
       await performYouTubeSearchWithPageControl(parser, keyword);
     } catch (error) {
-      console.error(`❌ Error processing keyword "${keyword}":`, (error as Error).message);
+      console.error(
+        `❌ Error processing keyword "${keyword}":`,
+        (error as Error).message,
+      );
     } finally {
       // Always close the parser after each search
       console.log(`\n🧹 Closing browser for keyword "${keyword}"...`);
       await parser.cleanup();
       console.log(`✅ Browser closed for keyword "${keyword}"`);
-      
+
       // Wait between searches to be respectful
       if (i < searchKeywords.length - 1) {
         console.log('\n⏳ Waiting 3 seconds before next search...');
@@ -80,11 +88,14 @@ async function performYouTubeSearchWithPageControl(
   try {
     // Step 1: Open YouTube and get page control
     console.log('📱 Step 1: Opening YouTube homepage...');
-    const { page: youtubePage, context: youtubeContext } = await parser.getPage('https://youtube.com/', {
-      timeout: 30000,
-      waitForTimeout: 3000,
-      waitUntil: 'load',
-    });
+    const { page: youtubePage, context: youtubeContext } = await parser.getPage(
+      'https://youtube.com/',
+      {
+        timeout: 30000,
+        waitForTimeout: 3000,
+        waitUntil: 'load',
+      },
+    );
 
     page = youtubePage;
     context = youtubeContext;
@@ -108,9 +119,11 @@ async function performYouTubeSearchWithPageControl(
     // Page remains open for a moment to see results
     console.log('\n🎯 Keeping page open for 5 seconds to see results...');
     await new Promise((resolve) => setTimeout(resolve, 5000));
-
   } catch (error) {
-    console.error(`❌ Error in search with page control:`, (error as Error).message);
+    console.error(
+      `❌ Error in search with page control:`,
+      (error as Error).message,
+    );
   } finally {
     // Clean up when done
     if (page && context) {
@@ -126,12 +139,17 @@ async function performSearchOnYouTubePage(page: Page, searchQuery: string) {
     console.log(`🔍 Searching for "${searchQuery}" on YouTube...`);
 
     // Wait for search input to be available - using the actual YouTube structure
-    await page.waitForSelector('input[name="search_query"], .ytSearchboxComponentInput', {
-      timeout: 10000,
-    });
+    await page.waitForSelector(
+      'input[name="search_query"], .ytSearchboxComponentInput',
+      {
+        timeout: 10000,
+      },
+    );
 
     // Clear and type in the search input using the correct selector
-    const searchInput = page.locator('input[name="search_query"], .ytSearchboxComponentInput').first();
+    const searchInput = page
+      .locator('input[name="search_query"], .ytSearchboxComponentInput')
+      .first();
     await searchInput.clear();
     await searchInput.fill(searchQuery);
 
@@ -143,7 +161,9 @@ async function performSearchOnYouTubePage(page: Page, searchQuery: string) {
     // Click the search button using the actual YouTube structure
     try {
       const searchButton = page
-        .locator('.ytSearchboxComponentSearchButton, button[aria-label="Search"]')
+        .locator(
+          '.ytSearchboxComponentSearchButton, button[aria-label="Search"]',
+        )
         .first();
       await searchButton.click();
       console.log('Clicked search button');
@@ -158,17 +178,18 @@ async function performSearchOnYouTubePage(page: Page, searchQuery: string) {
 
     // Wait for video items to appear
     try {
-      await page.waitForSelector(
-        'ytd-video-renderer, ytd-rich-item-renderer',
-        { timeout: 15000 }
-      );
+      await page.waitForSelector('ytd-video-renderer, ytd-rich-item-renderer', {
+        timeout: 15000,
+      });
       console.log('✅ Search results loaded successfully');
     } catch (waitError) {
       console.log('⚠️ Search results container not found, but continuing...');
     }
-
   } catch (error) {
-    console.error('❌ Error performing search on YouTube:', (error as Error).message);
+    console.error(
+      '❌ Error performing search on YouTube:',
+      (error as Error).message,
+    );
     throw error;
   }
 }
@@ -179,9 +200,7 @@ async function extractVideosFromCurrentPage(
   searchQuery: string,
 ) {
   try {
-    console.log(
-      `📄 Extracting from current page: ${html.length} characters`,
-    );
+    console.log(`📄 Extracting from current page: ${html.length} characters`);
 
     // Extract videos using YouTube's HTML structure
     const videoSchema: ExtractionSchema<{
@@ -202,22 +221,25 @@ async function extractVideosFromCurrentPage(
         transform: (items: string[]) => items,
       },
       videoTitles: {
-        selector: 'ytd-video-renderer #video-title, ytd-rich-item-renderer #video-title-link',
+        selector:
+          'ytd-video-renderer #video-title, ytd-rich-item-renderer #video-title-link',
         type: 'css',
         multiple: true,
         transform: (titles: string[]) =>
           titles
             .map((title) => title.trim())
-            .filter((title) => 
-              title.length > 3 && 
-              title.length < 300 &&
-              !title.includes('function') &&
-              !title.includes('window.') &&
-              !title.includes('return')
+            .filter(
+              (title) =>
+                title.length > 3 &&
+                title.length < 300 &&
+                !title.includes('function') &&
+                !title.includes('window.') &&
+                !title.includes('return'),
             ),
       },
       videoChannels: {
-        selector: 'ytd-video-renderer #channel-name a, ytd-rich-item-renderer #channel-name a',
+        selector:
+          'ytd-video-renderer #channel-name a, ytd-rich-item-renderer #channel-name a',
         type: 'css',
         multiple: true,
         transform: (channels: string[]) =>
@@ -226,43 +248,48 @@ async function extractVideosFromCurrentPage(
             .filter((channel) => channel.length > 0),
       },
       videoViews: {
-        selector: 'ytd-video-renderer #metadata-line span:first-child, ytd-rich-item-renderer #metadata-line span:first-child',
+        selector:
+          'ytd-video-renderer #metadata-line span:first-child, ytd-rich-item-renderer #metadata-line span:first-child',
         type: 'css',
         multiple: true,
         transform: (views: string[]) =>
           views
-            .filter((view) => 
-              view.includes('views') || 
-              view.includes('watching') ||
-              /^\d+[\d,]*\s*(views|watching)/.test(view.trim())
+            .filter(
+              (view) =>
+                view.includes('views') ||
+                view.includes('watching') ||
+                /^\d+[\d,]*\s*(views|watching)/.test(view.trim()),
             )
             .map((view) => view.trim()),
       },
       videoDurations: {
-        selector: 'ytd-video-renderer .ytd-thumbnail-overlay-time-status-renderer, ytd-rich-item-renderer .ytd-thumbnail-overlay-time-status-renderer',
+        selector:
+          'ytd-video-renderer .ytd-thumbnail-overlay-time-status-renderer, ytd-rich-item-renderer .ytd-thumbnail-overlay-time-status-renderer',
         type: 'css',
         multiple: true,
         transform: (durations: string[]) =>
           durations
-            .filter((duration) => 
-              /^\d+:\d+/.test(duration.trim()) || 
-              duration.includes('LIVE')
+            .filter(
+              (duration) =>
+                /^\d+:\d+/.test(duration.trim()) || duration.includes('LIVE'),
             )
             .map((duration) => duration.trim()),
       },
       videoUploadTimes: {
-        selector: 'ytd-video-renderer #metadata-line span:last-child, ytd-rich-item-renderer #metadata-line span:last-child',
+        selector:
+          'ytd-video-renderer #metadata-line span:last-child, ytd-rich-item-renderer #metadata-line span:last-child',
         type: 'css',
         multiple: true,
         transform: (times: string[]) =>
           times
-            .filter((time) => 
-              time.includes('ago') || 
-              time.includes('hour') ||
-              time.includes('day') ||
-              time.includes('week') ||
-              time.includes('month') ||
-              time.includes('year')
+            .filter(
+              (time) =>
+                time.includes('ago') ||
+                time.includes('hour') ||
+                time.includes('day') ||
+                time.includes('week') ||
+                time.includes('month') ||
+                time.includes('year'),
             )
             .map((time) => time.trim()),
       },
@@ -272,13 +299,14 @@ async function extractVideosFromCurrentPage(
         attribute: 'src',
         multiple: true,
         transform: (thumbnails: string[]) =>
-          thumbnails.filter((thumb) => 
-            thumb.includes('ytimg.com') || 
-            thumb.includes('youtube.com')
+          thumbnails.filter(
+            (thumb) =>
+              thumb.includes('ytimg.com') || thumb.includes('youtube.com'),
           ),
       },
       videoUrls: {
-        selector: 'ytd-video-renderer #video-title, ytd-rich-item-renderer #video-title-link',
+        selector:
+          'ytd-video-renderer #video-title, ytd-rich-item-renderer #video-title-link',
         type: 'css',
         attribute: 'href',
         multiple: true,
@@ -290,37 +318,40 @@ async function extractVideosFromCurrentPage(
             ),
       },
       videoDescriptions: {
-        selector: 'ytd-video-renderer #description-text, ytd-rich-item-renderer #description-text',
+        selector:
+          'ytd-video-renderer #description-text, ytd-rich-item-renderer #description-text',
         type: 'css',
         multiple: true,
         transform: (descriptions: string[]) =>
           descriptions
             .map((desc) => desc.trim())
-            .filter((desc) => 
-              desc.length > 10 && 
-              desc.length < 500
-            )
+            .filter((desc) => desc.length > 10 && desc.length < 500)
             .slice(0, 20),
       },
     };
 
-    const extractedData = parser.extractStructuredFromHtml(
-      html,
-      videoSchema,
-    );
+    const extractedData = parser.extractStructuredFromHtml(html, videoSchema);
 
     console.log(`📊 Extraction results:`);
-    console.log(
-      `   Video containers found: ${extractedData.videos.length}`,
-    );
+    console.log(`   Video containers found: ${extractedData.videos.length}`);
     console.log(`   Video titles found: ${extractedData.videoTitles.length}`);
-    console.log(`   Video channels found: ${extractedData.videoChannels.length}`);
+    console.log(
+      `   Video channels found: ${extractedData.videoChannels.length}`,
+    );
     console.log(`   Video views found: ${extractedData.videoViews.length}`);
-    console.log(`   Video durations found: ${extractedData.videoDurations.length}`);
-    console.log(`   Video upload times found: ${extractedData.videoUploadTimes.length}`);
-    console.log(`   Video thumbnails found: ${extractedData.videoThumbnails.length}`);
+    console.log(
+      `   Video durations found: ${extractedData.videoDurations.length}`,
+    );
+    console.log(
+      `   Video upload times found: ${extractedData.videoUploadTimes.length}`,
+    );
+    console.log(
+      `   Video thumbnails found: ${extractedData.videoThumbnails.length}`,
+    );
     console.log(`   Video URLs found: ${extractedData.videoUrls.length}`);
-    console.log(`   Video descriptions found: ${extractedData.videoDescriptions.length}`);
+    console.log(
+      `   Video descriptions found: ${extractedData.videoDescriptions.length}`,
+    );
 
     // Combine data into structured videos
     const videos = combineYouTubeVideoData(extractedData);
@@ -363,15 +394,20 @@ function combineYouTubeVideoData(extractedData: {
         title: extractedData.videoTitles[i]?.trim() || 'Unknown Title',
         channel: extractedData.videoChannels[i]?.trim() || 'Unknown Channel',
         views: extractedData.videoViews[i]?.trim() || 'Views not available',
-        duration: extractedData.videoDurations[i]?.trim() || 'Duration not available',
-        uploadTime: extractedData.videoUploadTimes[i]?.trim() || 'Upload time not available',
+        duration:
+          extractedData.videoDurations[i]?.trim() || 'Duration not available',
+        uploadTime:
+          extractedData.videoUploadTimes[i]?.trim() ||
+          'Upload time not available',
         thumbnail: extractedData.videoThumbnails[i] || '',
         videoUrl: extractedData.videoUrls[i] || '',
         description: extractedData.videoDescriptions[i]?.trim() || undefined,
         isLive: extractedData.videoDurations[i]?.includes('LIVE') || false,
-        isShort: extractedData.videoDurations[i]?.includes(':') && 
-                 parseInt(extractedData.videoDurations[i]?.split(':')[0] || '0') === 0 &&
-                 parseInt(extractedData.videoDurations[i]?.split(':')[1] || '0') <= 60,
+        isShort:
+          extractedData.videoDurations[i]?.includes(':') &&
+          parseInt(extractedData.videoDurations[i]?.split(':')[0] || '0') ===
+            0 &&
+          parseInt(extractedData.videoDurations[i]?.split(':')[1] || '0') <= 60,
       });
     }
   }
@@ -419,12 +455,8 @@ function displayYouTubeVideoResults(
   console.log(
     `   Videos with descriptions: ${videos.filter((v) => v.description).length}`,
   );
-  console.log(
-    `   Live videos: ${videos.filter((v) => v.isLive).length}`,
-  );
-  console.log(
-    `   Short videos: ${videos.filter((v) => v.isShort).length}`,
-  );
+  console.log(`   Live videos: ${videos.filter((v) => v.isLive).length}`);
+  console.log(`   Short videos: ${videos.filter((v) => v.isShort).length}`);
   console.log(
     `   Videos with thumbnails: ${videos.filter((v) => v.thumbnail).length}`,
   );
@@ -499,7 +531,7 @@ export { demonstrateYouTubeSearch };
 
 // Run the demo if this file is executed directly
 if (require.main === module) {
-  demonstrateYouTubeSearch()
-    .then(() => console.log('\n🎉 YouTube search demo completed!'))
-    .catch((error) => console.error('\n💥 Demo failed:', (error as Error).message));
+  demonstrateYouTubeSearch().catch((error) =>
+    console.error('\n💥 Demo failed:', (error as Error).message),
+  );
 }

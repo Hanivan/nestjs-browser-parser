@@ -1,21 +1,21 @@
 // Transform function types - supports various transformation patterns
-export type TransformFunction<TInput = any, TOutput = any> = (
+export type TransformFunction<TInput = unknown, TOutput = unknown> = (
   value: TInput,
 ) => TOutput;
-export type TransformObject<TInput = any, TOutput = any> = {
+export type TransformObject<TInput = unknown, TOutput = unknown> = {
   transform: (value: TInput) => TOutput;
 };
-export type TransformClass<TInput = any, TOutput = any> = new () => {
+export type TransformClass<TInput = unknown, TOutput = unknown> = new () => {
   transform: (value: TInput) => TOutput;
 };
-export type TransformType<TInput = any, TOutput = any> =
+export type TransformType<TInput = unknown, TOutput = unknown> =
   | TransformFunction<TInput, TOutput>
   | TransformObject<TInput, TOutput>
   | TransformClass<TInput, TOutput>
   | TransformFunction<TInput, TOutput>[];
 
 // Enhanced extraction configuration for each field
-export interface ExtractionFieldConfig<TValue = any> {
+export interface ExtractionFieldConfig<TValue = unknown> {
   /** CSS selector or XPath expression */
   selector: string;
   /** Type of selector to use */
@@ -27,7 +27,7 @@ export interface ExtractionFieldConfig<TValue = any> {
   /** Whether to return raw HTML instead of text content */
   raw?: boolean;
   /** Transform function to apply to extracted value(s) */
-  transform?: TransformType<any, TValue>;
+  transform?: TransformType<unknown, TValue>;
   /** Whether to wait for selector to appear */
   waitForSelector?: boolean;
   /** Timeout for waiting (in milliseconds) */
@@ -35,7 +35,7 @@ export interface ExtractionFieldConfig<TValue = any> {
 }
 
 // Main extraction schema interface with full type safety
-export type ExtractionSchema<T = Record<string, any>> = {
+export type ExtractionSchema<T = Record<string, unknown>> = {
   [K in keyof T]: ExtractionFieldConfig<T[K]>;
 };
 
@@ -49,7 +49,7 @@ export interface ExtractionOptions {
 
 // Evaluation function types
 export interface EvaluationFunction {
-  (element: Element): any;
+  (element: Element): unknown;
 }
 
 export interface PageEvaluationOptions {

@@ -2,7 +2,7 @@ import { Browser, BrowserContext, Page } from 'playwright-core';
 
 export interface BrowserManager {
   getBrowser(): Promise<Browser>;
-  getContext(options?: any): Promise<BrowserContext>;
+  getContext(options?: Record<string, unknown>): Promise<BrowserContext>;
   getPage(context?: BrowserContext): Promise<Page>;
   cleanup(): Promise<void>;
 }

@@ -20,6 +20,15 @@ import {
   TransformFunction,
   TransformObject,
   TransformType,
+  PaginatedExtractionOptions,
+  PaginationResult,
+  PaginationState,
+  PaginationOptions,
+  InfiniteScrollConfig,
+  LoadMoreButtonConfig,
+  NumberedPaginationConfig,
+  CursorBasedConfig,
+  HybridConfig,
 } from './types';
 
 @Injectable()
@@ -409,7 +418,7 @@ export class JSParserService implements OnModuleDestroy {
     }
   }
 
-  async extractStructured<T = Record<string, any>>(
+  async extractStructured<T = Record<string, unknown>>(
     url: string,
     schema: ExtractionSchema<T>,
     options?: JSParserOptions,
@@ -421,12 +430,12 @@ export class JSParserService implements OnModuleDestroy {
     });
   }
 
-  extractStructuredFromHtml<T = Record<string, any>>(
+  extractStructuredFromHtml<T = Record<string, unknown>>(
     html: string,
     schema: ExtractionSchema<T>,
     options?: ExtractionOptions,
   ): T {
-    const result: Record<string, any> = {};
+    const result: Record<string, unknown> = {};
 
     for (const [key, config] of Object.entries(schema)) {
       try {
@@ -564,6 +573,540 @@ export class JSParserService implements OnModuleDestroy {
     }
 
     return value;
+  }
+
+  /**
+   * Extract data with automatic pagination support
+   */
+  async extractWithPagination<T = unknown>(
+    url: string,
+    options: PaginatedExtractionOptions<T>,
+    parserOptions?: JSParserOptions
+  ): Promise<PaginationResult<T>> {
+    const startTime = Date.now();
+    const state: PaginationState = {
+      currentPage: 0,
+      totalItems: 0,
+      errors: [],
+      startTime,
+      isLoading: false,
+    };
+
+    const result: PaginationResult<T> = {
+      items: [],
+      pagesProcessed: 0,
+      totalTime: 0,
+      completed: false,
+      stopReason: 'endReached',
+      errors: [],
+      metadata: {
+        startTime,
+        endTime: 0,
+        averagePageTime: 0,
+      },
+    };
+
+    const { page, context } = await this.getPage(url, parserOptions);
+
+    try {
+      options.eventHandlers?.onPageStart?.(0, state);
+
+      // Perform pagination based on strategy
+      await this.performPagination(page, options, state, result);
+
+      result.completed = true;
+      result.totalTime = Date.now() - startTime;
+      result.metadata.endTime = Date.now();
+      result.metadata.averagePageTime = result.pagesProcessed > 0 
+        ? result.totalTime / result.pagesProcessed 
+        : 0;
+
+      options.eventHandlers?.onComplete?.(result);
+
+      return result;
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      result.errors.push(errorMessage);
+      result.stopReason = 'error';
+      
+      if (this.shouldLog('error')) {
+        this.logWithLevel('error', 'Pagination error:', error);
+      }
+
+      options.eventHandlers?.onError?.(errorMessage, state.currentPage, state);
+      return result;
+    } finally {
+      await page.close();
+      await context.close();
+    }
+  }
+
+  /**
+   * Perform pagination based on the configured strategy
+   */
+  private async performPagination<T>(
+    page: Page,
+    options: PaginatedExtractionOptions<T>,
+    state: PaginationState,
+    result: PaginationResult<T>
+  ): Promise<void> {
+    const config = options.pagination;
+
+    switch (config.type) {
+      case 'infinite-scroll':
+        await this.performInfiniteScroll(page, options, state, result);
+        break;
+      case 'load-more-button':
+        await this.performLoadMoreButton(page, options, state, result);
+        break;
+      case 'numbered-pagination':
+        await this.performNumberedPagination(page, options, state, result);
+        break;
+      case 'cursor-based':
+        await this.performCursorBasedPagination(page, options, state, result);
+        break;
+      case 'time-based':
+        await this.performTimeBasedPagination(page, options, state, result);
+        break;
+      case 'hybrid':
+        await this.performHybridPagination(page, options, state, result);
+        break;
+      default:
+        throw new Error(`Unsupported pagination type: ${(config as { type: string }).type}`);
+    }
+  }
+
+  /**
+   * Handle infinite scroll pagination
+   */
+  private async performInfiniteScroll<T>(
+    page: Page,
+    options: PaginatedExtractionOptions<T>,
+    state: PaginationState,
+    result: PaginationResult<T>
+  ): Promise<void> {
+    const config = options.pagination as InfiniteScrollConfig;
+    const scrollOptions = config.scrollOptions || {};
+    let scrollCount = 0;
+    let lastItemCount = 0;
+
+    while (this.shouldContinuePagination(config, state, result)) {
+      // Extract items from current view
+      const html = await page.content();
+      const newItems = await options.extractItems(page, html);
+      
+      if (config.verbose) {
+        this.logWithLevel('debug', `📦 Extracted ${newItems.length} items from scroll ${state.currentPage + 1}`);
+      }
+      
+      await this.processNewItems(newItems, options, state, result);
+      
+      options.eventHandlers?.onPageComplete?.(state.currentPage, newItems, state);
+
+      // Check if we have new items
+      if (result.items.length === lastItemCount) {
+        // No new items, try scrolling
+        if (config.verbose) {
+          this.logWithLevel('debug', `🔄 No new items found, attempting scroll (${scrollCount + 1}/${scrollOptions.maxScrolls || 'unlimited'})`);
+        }
+        
+        const scrolled = await this.performScroll(page, scrollOptions);
+        if (!scrolled) {
+          if (config.verbose) {
+            this.logWithLevel('debug', '🛑 Scroll failed or reached end of page');
+          }
+          result.stopReason = 'endReached';
+          break;
+        }
+        scrollCount++;
+        
+        if (scrollOptions.maxScrolls && scrollCount >= scrollOptions.maxScrolls) {
+          if (config.verbose) {
+            this.logWithLevel('debug', `🛑 Reached maximum scroll limit (${scrollOptions.maxScrolls})`);
+          }
+          result.stopReason = 'endReached';
+          break;
+        }
+
+        // Wait for content to load after scrolling
+        if (config.loadingSelector) {
+          try {
+            await page.waitForSelector(config.loadingSelector, { timeout: 2000 });
+            await page.waitForSelector(config.loadingSelector, { state: 'hidden', timeout: 10000 });
+          } catch {
+            // Loading indicator might not appear or disappear quickly
+          }
+        } else {
+          // Give time for new content to load
+          await page.waitForTimeout(2000);
+        }
+        
+      } else {
+        if (config.verbose) {
+          this.logWithLevel('debug', `✅ Found ${result.items.length - lastItemCount} new items (total: ${result.items.length})`);
+        }
+        lastItemCount = result.items.length;
+        scrollCount = 0; // Reset scroll count when we get new items
+      }
+
+      await page.waitForTimeout(config.delay || 1000);
+      state.currentPage++;
+      result.pagesProcessed++;
+    }
+  }
+
+  /**
+   * Handle load more button pagination
+   */
+  private async performLoadMoreButton<T>(
+    page: Page,
+    options: PaginatedExtractionOptions<T>,
+    state: PaginationState,
+    result: PaginationResult<T>
+  ): Promise<void> {
+    const config = options.pagination as LoadMoreButtonConfig;
+
+    // Extract initial items
+    let html = await page.content();
+    let newItems = await options.extractItems(page, html);
+    await this.processNewItems(newItems, options, state, result);
+
+    while (this.shouldContinuePagination(config, state, result)) {
+      // Try to find and click load more button
+      const buttonClicked = await this.clickLoadMoreButton(page, config);
+      
+      if (!buttonClicked) {
+        result.stopReason = 'endReached';
+        break;
+      }
+
+      // Wait for new content
+      await page.waitForTimeout(config.waitAfterClick || 2000);
+      
+      if (config.waitForSelector) {
+        try {
+          await page.waitForSelector(config.waitForSelector, { timeout: 10000 });
+        } catch {
+          // Selector might not appear
+        }
+      }
+
+      // Extract new items
+      html = await page.content();
+      newItems = await options.extractItems(page, html);
+      await this.processNewItems(newItems, options, state, result);
+      
+      options.eventHandlers?.onPageComplete?.(state.currentPage, newItems, state);
+
+      await page.waitForTimeout(config.delay || 1000);
+      state.currentPage++;
+      result.pagesProcessed++;
+    }
+  }
+
+  /**
+   * Handle numbered pagination
+   */
+  private async performNumberedPagination<T>(
+    page: Page,
+    options: PaginatedExtractionOptions<T>,
+    state: PaginationState,
+    result: PaginationResult<T>
+  ): Promise<void> {
+    const config = options.pagination as NumberedPaginationConfig;
+
+    while (this.shouldContinuePagination(config, state, result)) {
+      // Extract items from current page
+      const html = await page.content();
+      const newItems = await options.extractItems(page, html);
+      await this.processNewItems(newItems, options, state, result);
+      
+      options.eventHandlers?.onPageComplete?.(state.currentPage, newItems, state);
+
+      // Try to navigate to next page
+      const navigated = await this.navigateToNextPage(page, config);
+      
+      if (!navigated) {
+        result.stopReason = 'endReached';
+        break;
+      }
+
+      await page.waitForTimeout(config.delay || 2000);
+      state.currentPage++;
+      result.pagesProcessed++;
+    }
+  }
+
+  /**
+   * Handle cursor-based pagination
+   */
+  private async performCursorBasedPagination<T>(
+    page: Page,
+    options: PaginatedExtractionOptions<T>,
+    state: PaginationState,
+    result: PaginationResult<T>
+  ): Promise<void> {
+    const config = options.pagination as CursorBasedConfig;
+    let cursor = config.initialCursor;
+
+    while (this.shouldContinuePagination(config, state, result)) {
+      // Extract items from current page
+      const html = await page.content();
+      const newItems = await options.extractItems(page, html);
+      await this.processNewItems(newItems, options, state, result);
+      
+      options.eventHandlers?.onPageComplete?.(state.currentPage, newItems, state);
+
+      // Extract cursor for next page
+      const nextCursor = await config.extractCursor(page, result.items);
+      
+      if (!nextCursor) {
+        result.stopReason = 'endReached';
+        break;
+      }
+      
+      cursor = nextCursor;
+
+      state.lastCursor = cursor;
+      result.metadata.lastCursor = cursor;
+
+      // Navigate to next page using cursor
+      await config.navigateWithCursor(page, cursor);
+      await page.waitForTimeout(config.delay || 2000);
+      
+      state.currentPage++;
+      result.pagesProcessed++;
+    }
+  }
+
+  /**
+   * Handle time-based pagination
+   */
+  private async performTimeBasedPagination<T>(
+    _page: Page,
+    _options: PaginatedExtractionOptions<T>,
+    _state: PaginationState,
+    _result: PaginationResult<T>
+  ): Promise<void> {
+    // Implementation for time-based pagination
+    // This is more complex and depends on specific use cases
+    throw new Error('Time-based pagination not yet implemented');
+  }
+
+  /**
+   * Handle hybrid pagination
+   */
+  private async performHybridPagination<T>(
+    page: Page,
+    options: PaginatedExtractionOptions<T>,
+    state: PaginationState,
+    result: PaginationResult<T>
+  ): Promise<void> {
+    const config = options.pagination as HybridConfig;
+    
+    try {
+      // Try primary strategy first
+      const primaryOptions: PaginatedExtractionOptions<T> = { 
+        ...options, 
+        pagination: config.primaryStrategy as PaginationOptions 
+      };
+      await this.performPagination(page, primaryOptions, state, result);
+    } catch (error) {
+      if (this.shouldLog('warn')) {
+        this.logWithLevel('warn', 'Primary pagination strategy failed, trying fallback');
+      }
+      
+      // Try fallback strategy
+      const fallbackOptions: PaginatedExtractionOptions<T> = { 
+        ...options, 
+        pagination: config.fallbackStrategy as PaginationOptions 
+      };
+      await this.performPagination(page, fallbackOptions, state, result);
+    }
+  }
+
+  /**
+   * Check if pagination should continue
+   */
+  private shouldContinuePagination<T>(
+    config: PaginationOptions,
+    state: PaginationState,
+    result: PaginationResult<T>
+  ): boolean {
+    if (config.maxPages && state.currentPage >= config.maxPages) {
+      result.stopReason = 'maxPages';
+      return false;
+    }
+    
+    if (config.maxItems && result.items.length >= config.maxItems) {
+      result.stopReason = 'maxItems';
+      return false;
+    }
+
+    if (config.stopCondition) {
+      // This would need to be handled in the calling context
+      // since we can't pass the page object here easily
+    }
+
+    return true;
+  }
+
+  /**
+   * Process new items from a page
+   */
+  private async processNewItems<T>(
+    newItems: T[],
+    options: PaginatedExtractionOptions<T>,
+    state: PaginationState,
+    result: PaginationResult<T>
+  ): Promise<void> {
+    for (const item of newItems) {
+      const isDuplicate = options.isDuplicate 
+        ? options.isDuplicate(item, result.items)
+        : false;
+
+      if (!isDuplicate || options.includeDuplicates) {
+        result.items.push(item);
+        state.totalItems++;
+      }
+    }
+
+    options.eventHandlers?.onItemsExtracted?.(newItems, state.currentPage, state);
+  }
+
+  /**
+   * Perform scroll action
+   */
+  private async performScroll(
+    page: Page,
+    scrollOptions: InfiniteScrollConfig['scrollOptions'] = {}
+  ): Promise<boolean> {
+    try {
+      if (scrollOptions.scrollToBottom !== false) {
+        // Get current scroll position and document height before scrolling
+        const beforeScroll = await page.evaluate(() => ({
+          scrollY: window.scrollY,
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight
+        }));
+
+        if (this.shouldLog('debug')) {
+          this.logWithLevel('debug', `🔄 Scrolling to bottom from ${beforeScroll.scrollY} (page height: ${beforeScroll.scrollHeight})`);
+        }
+
+        // Scroll to bottom using multiple methods for better compatibility
+        await page.evaluate(() => {
+          // Method 1: Scroll to document height
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth'
+          });
+        });
+
+        // Wait a moment for smooth scroll
+        await page.waitForTimeout(500);
+
+        // Method 2: Ensure we're really at the bottom
+        await page.evaluate(() => {
+          document.documentElement.scrollTop = document.documentElement.scrollHeight;
+          document.body.scrollTop = document.body.scrollHeight;
+        });
+
+        // Verify we actually scrolled
+        const afterScroll = await page.evaluate(() => ({
+          scrollY: window.scrollY,
+          scrollHeight: document.documentElement.scrollHeight,
+          clientHeight: document.documentElement.clientHeight
+        }));
+
+        if (this.shouldLog('debug')) {
+          this.logWithLevel('debug', `✅ Scrolled to ${afterScroll.scrollY} (page height: ${afterScroll.scrollHeight})`);
+        }
+
+        // Check if we're near the bottom (within 100px)
+        const isNearBottom = afterScroll.scrollY + afterScroll.clientHeight >= afterScroll.scrollHeight - 100;
+        
+        if (!isNearBottom && afterScroll.scrollY === beforeScroll.scrollY) {
+          if (this.shouldLog('debug')) {
+            this.logWithLevel('debug', '⚠️ Scroll position did not change, may have reached end');
+          }
+          return false;
+        }
+
+      } else if (scrollOptions.scrollDistance) {
+        const distance = typeof scrollOptions.scrollDistance === 'string'
+          ? parseInt(scrollOptions.scrollDistance)
+          : scrollOptions.scrollDistance;
+
+        if (this.shouldLog('debug')) {
+          this.logWithLevel('debug', `🔄 Scrolling by ${distance}px`);
+        }
+          
+        await page.evaluate((dist) => {
+          window.scrollBy({
+            top: dist,
+            behavior: 'smooth'
+          });
+        }, distance);
+      }
+
+      await page.waitForTimeout(scrollOptions.scrollDelay || 1000);
+      return true;
+    } catch (error) {
+      if (this.shouldLog('error')) {
+        this.logWithLevel('error', 'Scroll error:', error);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Click load more button
+   */
+  private async clickLoadMoreButton(
+    page: Page,
+    config: LoadMoreButtonConfig
+  ): Promise<boolean> {
+    const selectors = [config.buttonSelector, ...(config.alternativeSelectors || [])];
+
+    for (const selector of selectors) {
+      try {
+        const button = page.locator(selector);
+        const isVisible = await button.isVisible();
+        
+        if (isVisible) {
+          await button.click();
+          return true;
+        }
+      } catch {
+        // Try next selector
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Navigate to next page in numbered pagination
+   */
+  private async navigateToNextPage(
+    page: Page,
+    config: NumberedPaginationConfig
+  ): Promise<boolean> {
+    try {
+      const nextButton = page.locator(config.nextButtonSelector);
+      const isVisible = await nextButton.isVisible();
+      
+      if (isVisible) {
+        await nextButton.click();
+        await page.waitForLoadState('networkidle');
+        return true;
+      }
+      
+      return false;
+    } catch {
+      return false;
+    }
   }
 
   async cleanup(): Promise<void> {
