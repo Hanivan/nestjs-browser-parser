@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { JSParserModule, JSParserService } from '../index';
+import { BrowserParserModule, BrowserParserService } from '../index';
 
 @Module({
   imports: [
-    JSParserModule.forRoot({
+    BrowserParserModule.forRoot({
       loggerLevel: 'debug',
       headless: true,
       browserConnection: {
@@ -19,20 +19,20 @@ import { JSParserModule, JSParserService } from '../index';
 export class DemoAppModule {}
 
 export async function runDemo() {
-  console.log('🚀 Starting NestJS JS Parser Demo');
+  console.log('🚀 Starting NestJS Browser Parser Demo');
 
   const app = await NestFactory.createApplicationContext(DemoAppModule);
-  const jsParser = app.get(JSParserService);
+  const browserParser = app.get(BrowserParserService);
 
   try {
     // Basic example
     console.log('\n📄 Basic HTML Parsing Example:');
-    const response = await jsParser.fetchHtml('https://example.com', {
+    const response = await browserParser.fetchHtml('https://example.com', {
       verbose: true,
       timeout: 15000,
     });
 
-    const pageInfo = jsParser.extractStructuredFromHtml(response.html, {
+    const pageInfo = browserParser.extractStructuredFromHtml(response.html, {
       title: { selector: 'title', type: 'css' },
     });
     console.log('Title:', pageInfo.title);
@@ -41,7 +41,7 @@ export async function runDemo() {
 
     // Structured extraction example
     console.log('\n📋 Structured Data Extraction:');
-    const structured = jsParser.extractStructuredFromHtml(response.html, {
+    const structured = browserParser.extractStructuredFromHtml(response.html, {
       title: {
         selector: 'title',
         type: 'css',
@@ -63,15 +63,18 @@ export async function runDemo() {
 
     // Screenshot example
     console.log('\n📸 Taking Screenshot:');
-    const screenshot = await jsParser.takeScreenshot('https://example.com', {
-      type: 'png',
-      fullPage: false,
-    });
+    const screenshot = await browserParser.takeScreenshot(
+      'https://example.com',
+      {
+        type: 'png',
+        fullPage: false,
+      },
+    );
     console.log('Screenshot captured, size:', screenshot.length, 'bytes');
 
     // JavaScript evaluation example
     console.log('\n⚡ JavaScript Evaluation:');
-    const jsResult = await jsParser.evaluateOnPage(
+    const jsResult = await browserParser.evaluateOnPage(
       'https://httpbin.org/html',
       '() => ({ title: document.title, elementCount: document.querySelectorAll("*").length })',
     );
@@ -79,7 +82,7 @@ export async function runDemo() {
   } catch (error) {
     console.error('❌ Demo error:', error);
   } finally {
-    await jsParser.cleanup();
+    await browserParser.cleanup();
     await app.close();
     console.log('\n✅ Demo completed and cleaned up');
   }

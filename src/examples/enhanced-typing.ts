@@ -1,4 +1,4 @@
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 import { ExtractionSchema } from '../types';
 
 // Define typed interfaces for structured extraction
@@ -35,7 +35,7 @@ interface SEOMetrics {
 }
 
 async function demonstrateEnhancedTyping() {
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: false,
     browserConnection: {
@@ -46,7 +46,7 @@ async function demonstrateEnhancedTyping() {
   });
 
   try {
-    console.log('🚀 NestJS JS Parser - Enhanced TypeScript Typing Demo\n');
+    console.log('🚀 NestJS Browser Parser - Enhanced TypeScript Typing Demo\n');
 
     // Example 1: Type-safe product extraction
     console.log('1. Type-Safe Product Data Extraction');

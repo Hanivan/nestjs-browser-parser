@@ -1,6 +1,6 @@
 import { Response } from 'playwright-core';
 
-export interface JSParseResponse {
+export interface BrowserParseResponse {
   html: string;
   url: string;
   status: number;
@@ -48,6 +48,6 @@ export interface PageMetrics {
   };
 }
 
-export interface JSParseResponseWithMetrics extends JSParseResponse {
+export interface BrowserParseResponseWithMetrics extends BrowserParseResponse {
   metrics: PageMetrics;
 }

@@ -1,4 +1,4 @@
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 import { ExtractionSchema } from '../types';
 
 // Define typed interfaces based on actual Shopee HTML structure
@@ -21,7 +21,7 @@ interface ShopeeSearchResultsReal {
 }
 
 async function demonstrateShopeeRealSearch() {
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: false, // Keep visible to see the process
     browserConnection: {
@@ -38,7 +38,7 @@ async function demonstrateShopeeRealSearch() {
   });
 
   try {
-    console.log('🛒 NestJS JS Parser - Real Shopee Search Demo\n');
+    console.log('🛒 NestJS Browser Parser - Real Shopee Search Demo\n');
 
     // Test with different search keywords
     const searchQueries = ['laptop', 'smartphone samsung', 'sepatu nike'];

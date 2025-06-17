@@ -1,5 +1,5 @@
 import { Page } from 'playwright-core';
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 import { PaginatedExtractionOptions, PaginationResult } from '../types';
 
 // Define typed interfaces for YouTube video data
@@ -15,9 +15,9 @@ interface YouTubeVideo {
 }
 
 async function demonstrateYouTubePagination() {
-  console.log('🎥 NestJS JS Parser - YouTube Pagination Demo\n');
+  console.log('🎥 NestJS Browser Parser - YouTube Pagination Demo\n');
 
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: false, // Keep visible to see the process
     browserConnection: {
@@ -50,7 +50,7 @@ async function demonstrateYouTubePagination() {
   }
 }
 
-async function testInfiniteScrollPagination(parser: JSParserService) {
+async function testInfiniteScrollPagination(parser: BrowserParserService) {
   console.log('📜 Testing Infinite Scroll Pagination');
   console.log('='.repeat(40));
 
@@ -117,7 +117,7 @@ async function testInfiniteScrollPagination(parser: JSParserService) {
   displayPaginationResults(result, 'Infinite Scroll');
 }
 
-async function testLoadMoreButtonPagination(parser: JSParserService) {
+async function testLoadMoreButtonPagination(parser: BrowserParserService) {
   console.log('🔘 Testing Load More Button Pagination');
   console.log('='.repeat(40));
 

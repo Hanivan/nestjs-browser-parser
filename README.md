@@ -1,4 +1,4 @@
-# NestJS JS Parser
+# NestJS Browser Parser
 
 A powerful NestJS module for parsing HTML content with JavaScript support using Playwright Core. This module provides comprehensive features for web scraping, data extraction, and automation with both CDP (Chrome DevTools Protocol) and built-in browser support.
 
@@ -30,10 +30,10 @@ yarn add playwright-core cheerio
 
 ```typescript
 import { Module } from '@nestjs/common';
-import { JSParserModule } from './js-parser.module';
+import { BrowserParserModule } from './browser-parser.module';
 
 @Module({
-  imports: [JSParserModule.forRoot()],
+  imports: [BrowserParserModule.forRoot()],
 })
 export class AppModule {}
 ```
@@ -42,19 +42,19 @@ export class AppModule {}
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { JSParserService } from './js-parser.service';
+import { BrowserParserService } from './browser-parser.service';
 
 @Injectable()
 export class ScrapingService {
-  constructor(private readonly jsParser: JSParserService) {}
+  constructor(private readonly browserParser: BrowserParserService) {}
 
   async scrapeWebsite(url: string) {
-    const response = await this.jsParser.fetchHtml(url, {
+    const response = await this.browserParser.fetchHtml(url, {
       verbose: true,
       timeout: 30000,
     });
 
-    const title = this.jsParser.extractSingle(response.html, 'title');
+    const title = this.browserParser.extractSingle(response.html, 'title');
     return { title, status: response.status };
   }
 }
@@ -65,7 +65,7 @@ export class ScrapingService {
 ### Built-in Browser (Default)
 
 ```typescript
-JSParserModule.forRoot({
+BrowserParserModule.forRoot({
   loggerLevel: 'debug',
   headless: true,
   browserConnection: {
@@ -90,7 +90,7 @@ JSParserModule.forRoot({
 ### Async Configuration
 
 ```typescript
-JSParserModule.forRootAsync({
+BrowserParserModule.forRootAsync({
   useFactory: (configService: ConfigService) => ({
     loggerLevel: configService.get('LOG_LEVEL', 'error'),
     headless: configService.get('HEADLESS', 'true') === 'true',
@@ -105,14 +105,14 @@ JSParserModule.forRootAsync({
 
 ## 📖 API Reference
 
-### JSParserService Methods
+### BrowserParserService Methods
 
 #### `fetchHtml(url, options?)`
 
 Fetch HTML content from a URL with JavaScript execution.
 
 ```typescript
-const response = await jsParser.fetchHtml('https://example.com', {
+const response = await browserParser.fetchHtml('https://example.com', {
   timeout: 30000,
   waitForSelector: '.dynamic-content',
   userAgent: 'Custom Bot 1.0',

@@ -1,5 +1,5 @@
 import { Page } from 'playwright-core';
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 import { PaginatedExtractionOptions, PaginationResult } from '../types';
 
 interface NewsArticle {
@@ -40,9 +40,9 @@ interface QuoteItem {
 }
 
 async function demonstratePaginationStrategies() {
-  console.log('📄 NestJS JS Parser - Pagination Strategies Demo\n');
+  console.log('📄 NestJS Browser Parser - Pagination Strategies Demo\n');
 
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: false,
     browserConnection: {

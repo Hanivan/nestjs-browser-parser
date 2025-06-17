@@ -1,15 +1,15 @@
-import { JSParserModuleConfig } from '../js-parser.config';
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserModuleConfig } from '../browser-parser.config';
+import { BrowserParserService } from '../browser-parser.service';
 import { LogLevel } from '../types';
 
 async function demonstrateBrowserConfiguration() {
-  console.log('🚀 NestJS JS Parser - Browser Configuration Demo\n');
+  console.log('🚀 NestJS Browser Parser - Browser Configuration Demo\n');
 
   // Example 1: Built-in browser (default)
   console.log('1. Built-in Browser Configuration (Default)');
   console.log('===========================================');
 
-  const builtinParser = new JSParserService({
+  const builtinParser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: true,
     defaultTimeout: 30000,
@@ -53,7 +53,7 @@ async function demonstrateBrowserConfiguration() {
   console.log('   /snap/bin/chromium        (Snap package)');
   console.log('   /usr/bin/chromium-browser (Some Linux distributions)');
 
-  const customChromeParser = new JSParserService({
+  const customChromeParser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: true, // Use headless mode for demo
     browserConnection: {
@@ -95,7 +95,7 @@ async function demonstrateBrowserConfiguration() {
     '   Then the parser can connect to: ws://localhost:9222/devtools/browser',
   );
 
-  const cdpParser = new JSParserService({
+  const cdpParser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     defaultTimeout: 30000,
     browserConnection: {
@@ -124,7 +124,7 @@ async function demonstrateBrowserConfiguration() {
   console.log('\n4. Environment-based Configuration');
   console.log('===================================');
 
-  const envBasedConfig: JSParserModuleConfig = {
+  const envBasedConfig: BrowserParserModuleConfig = {
     loggerLevel:
       process.env.NODE_ENV === 'development'
         ? (['debug', 'log', 'error'] as LogLevel[])
@@ -154,7 +154,7 @@ async function demonstrateBrowserConfiguration() {
   );
   console.log(`   Headless: ${envBasedConfig.headless}`);
 
-  const envParser = new JSParserService(envBasedConfig);
+  const envParser = new BrowserParserService(envBasedConfig);
 
   try {
     console.log('🧪 Testing environment-based configuration...');

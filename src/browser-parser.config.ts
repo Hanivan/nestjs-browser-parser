@@ -1,9 +1,9 @@
 import { LogLevel } from '@nestjs/common';
 
-export const JS_PARSER_CONFIG = Symbol('JS_PARSER_CONFIG');
-export const JS_PARSER_BROWSER_CONFIG = Symbol('JS_PARSER_BROWSER_CONFIG');
+export const BROWSER_PARSER_CONFIG = Symbol('BROWSER_PARSER_CONFIG');
+export const BROWSER_PARSER_BROWSER_CONFIG = Symbol('BROWSER_PARSER_BROWSER_CONFIG');
 
-export interface JSParserModuleConfig {
+export interface BrowserParserModuleConfig {
   loggerLevel?: LogLevel | LogLevel[];
   defaultTimeout?: number;
   headless?: boolean;
@@ -21,7 +21,7 @@ export interface JSParserModuleConfig {
   verbose?: boolean;
 }
 
-export const defaultJSParserConfig: JSParserModuleConfig = {
+export const defaultBrowserParserConfig: BrowserParserModuleConfig = {
   loggerLevel: ['log', 'error', 'debug'],
   defaultTimeout: 30000,
   headless: true,

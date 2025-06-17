@@ -1,5 +1,5 @@
 import { Page } from 'playwright-core';
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 import { PaginatedExtractionOptions } from '../types';
 
 interface SimpleItem {
@@ -11,7 +11,7 @@ interface SimpleItem {
 async function testInfiniteScroll() {
   console.log('🧪 Testing Infinite Scroll Functionality\n');
 
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: false, // Keep visible to see scrolling
     browserConnection: {

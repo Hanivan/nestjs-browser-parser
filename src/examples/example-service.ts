@@ -1,21 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 
 @Injectable()
 export class ExampleService {
-  constructor(private readonly jsParser: JSParserService) {}
+  constructor(private readonly browserParser: BrowserParserService) {}
 
   async basicExample() {
     console.log('🚀 Basic HTML Parsing with JavaScript Example');
 
     try {
       // Fetch a page that requires JavaScript
-      const response = await this.jsParser.fetchHtml('https://example.com', {
+      const response = await this.browserParser.fetchHtml('https://example.com', {
         verbose: true,
         timeout: 15000,
       });
 
-      const pageInfo = this.jsParser.extractStructuredFromHtml(response.html, {
+      const pageInfo = this.browserParser.extractStructuredFromHtml(response.html, {
         title: { selector: 'title', type: 'css' },
       });
       console.log('📄 Page Title:', pageInfo.title);
@@ -34,7 +34,7 @@ export class ExampleService {
 
     try {
       // Example with a site that loads content via JavaScript
-      const response = await this.jsParser.fetchHtml(
+      const response = await this.browserParser.fetchHtml(
         'https://httpbin.org/html',
         {
           waitForTimeout: 2000, // Wait for JS to load
@@ -42,7 +42,7 @@ export class ExampleService {
         },
       );
 
-      const structured = this.jsParser.extractStructuredFromHtml(
+      const structured = this.browserParser.extractStructuredFromHtml(
         response.html,
         {
           title: {
@@ -75,7 +75,7 @@ export class ExampleService {
     console.log('📸 Screenshot Example');
 
     try {
-      const screenshot = await this.jsParser.takeScreenshot(
+      const screenshot = await this.browserParser.takeScreenshot(
         'https://example.com',
         {
           type: 'png',
@@ -97,7 +97,7 @@ export class ExampleService {
 
     try {
       // Execute custom JavaScript on the page
-      const result = await this.jsParser.evaluateOnPage(
+      const result = await this.browserParser.evaluateOnPage(
         'https://httpbin.org/html',
         async (page) => {
           // Custom JavaScript to run on the page
@@ -124,7 +124,7 @@ export class ExampleService {
     console.log('⚙️ Advanced Configuration Example');
 
     try {
-      const response = await this.jsParser.fetchHtml(
+      const response = await this.browserParser.fetchHtml(
         'https://httpbin.org/user-agent',
         {
           userAgent: 'Custom Bot 1.0',

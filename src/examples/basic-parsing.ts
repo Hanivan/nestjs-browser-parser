@@ -1,7 +1,7 @@
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 
 async function demonstrateBasicParsing() {
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: false,
     browserConnection: {
@@ -12,7 +12,7 @@ async function demonstrateBasicParsing() {
   });
 
   try {
-    console.log('🚀 NestJS JS Parser - Basic Parsing Demo\n');
+    console.log('🚀 NestJS Browser Parser - Basic Parsing Demo\n');
 
     // Example 1: Basic HTML fetching with JavaScript
     console.log('1. Basic HTML Fetching with JavaScript');

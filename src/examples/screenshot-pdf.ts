@@ -1,7 +1,7 @@
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 
 async function demonstrateScreenshotPdf() {
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: true,
     browserConnection: {
@@ -12,7 +12,7 @@ async function demonstrateScreenshotPdf() {
   });
 
   try {
-    console.log('🚀 NestJS JS Parser - Screenshot & PDF Demo\n');
+    console.log('🚀 NestJS Browser Parser - Screenshot & PDF Demo\n');
 
     // Example 1: Basic screenshot
     console.log('1. Basic Screenshot Capture');

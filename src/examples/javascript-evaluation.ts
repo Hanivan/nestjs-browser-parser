@@ -1,7 +1,7 @@
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 
 async function demonstrateJavaScriptEvaluation() {
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: true,
     browserConnection: {
@@ -12,7 +12,7 @@ async function demonstrateJavaScriptEvaluation() {
   });
 
   try {
-    console.log('🚀 NestJS JS Parser - JavaScript Evaluation Demo\n');
+    console.log('🚀 NestJS Browser Parser - JavaScript Evaluation Demo\n');
 
     // Example 1: Basic JavaScript evaluation
     console.log('1. Basic JavaScript Evaluation');

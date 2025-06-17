@@ -1,5 +1,5 @@
 /**
- * @fileoverview NestJS JS Parser Package
+ * @fileoverview NestJS Browser Parser Package
  *
  * A powerful NestJS package for parsing HTML content that needs JavaScript enabled using Playwright Core:
  *
@@ -17,22 +17,22 @@
  *
  * ## Quick Start
  * ```typescript
- * import { JSParserModule, JSParserService } from 'nestjs-browser-parser';
+ * import { BrowserParserModule, BrowserParserService } from 'nestjs-browser-parser';
  *
  * // In your module
  * @Module({
- *   imports: [JSParserModule.forRoot()],
+ *   imports: [BrowserParserModule.forRoot()],
  * })
  * export class AppModule {}
  *
  * // In your service
  * @Injectable()
  * export class MyService {
- *   constructor(private jsParser: JSParserService) {}
+ *   constructor(private browserParser: BrowserParserService) {}
  *
  *   async getData() {
- *     const response = await this.jsParser.fetchHtml('https://example.com');
- *     const title = this.jsParser.extractSingle(response.html, 'title');
+ *     const response = await this.browserParser.fetchHtml('https://example.com');
+ *     const title = this.browserParser.extractSingle(response.html, 'title');
  *     return title;
  *   }
  * }
@@ -43,7 +43,7 @@
  */
 
 export * from './examples';
-export * from './js-parser.config';
-export * from './js-parser.module';
-export * from './js-parser.service';
+export * from './browser-parser.config';
+export * from './browser-parser.module';
+export * from './browser-parser.service';
 export * from './types';

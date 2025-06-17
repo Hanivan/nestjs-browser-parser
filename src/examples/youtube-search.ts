@@ -1,5 +1,5 @@
 import { BrowserContext, Page } from 'playwright-core';
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 import { ExtractionSchema } from '../types';
 
 // Define typed interfaces for YouTube video data
@@ -17,7 +17,7 @@ interface YouTubeVideo {
 }
 
 async function demonstrateYouTubeSearch() {
-  console.log('🎥 NestJS JS Parser - YouTube Search Demo\n');
+  console.log('🎥 NestJS Browser Parser - YouTube Search Demo\n');
 
   // Test with 3 different search keywords
   const searchKeywords = [
@@ -35,7 +35,7 @@ async function demonstrateYouTubeSearch() {
     console.log(`${'='.repeat(60)}`);
 
     // Create new parser instance for each search
-    const parser = new JSParserService({
+    const parser = new BrowserParserService({
       loggerLevel: ['log', 'error', 'debug'],
       headless: false, // Keep visible to see the process
       browserConnection: {

@@ -1,7 +1,7 @@
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 
 async function demonstrateStructuredExtraction() {
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: true,
     browserConnection: {
@@ -12,7 +12,7 @@ async function demonstrateStructuredExtraction() {
   });
 
   try {
-    console.log('🚀 NestJS JS Parser - Structured Data Extraction Demo\n');
+    console.log('🚀 NestJS Browser Parser - Structured Data Extraction Demo\n');
 
     // Example 1: Basic structured extraction
     console.log('1. Basic Structured Extraction');

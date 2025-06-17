@@ -1,5 +1,5 @@
 import { BrowserContext, Page } from 'playwright-core';
-import { JSParserService } from '../js-parser.service';
+import { BrowserParserService } from '../browser-parser.service';
 import { ExtractionSchema } from '../types';
 
 // Define typed interfaces based on actual Amazon HTML structure
@@ -24,7 +24,7 @@ interface AmazonSearchResultsReal {
 }
 
 async function demonstrateAmazonRealSearch() {
-  const parser = new JSParserService({
+  const parser = new BrowserParserService({
     loggerLevel: ['log', 'error', 'debug'],
     headless: false, // Keep visible to see the process
     browserConnection: {
@@ -41,23 +41,34 @@ async function demonstrateAmazonRealSearch() {
   });
 
   try {
-    console.log('🛒 NestJS JS Parser - Real Amazon Search Demo\n');
+    console.log('🛒 NestJS Browser Parser - Real Amazon Search Demo\n');
 
     // Test with different search keywords
-    const searchQueries = ['laptop', 'smartphone samsung', 'nike shoes'];
+    // Array of potential search queries with a mix of electronics, fashion, and household items
+    const searchQueries = [
+      'gaming laptop',
+      'wireless headphones',
+      'smart watch',
+      'running shoes',
+      'coffee maker',
+      'bluetooth speaker',
+    ];
 
-    for (const query of searchQueries.slice(0, 1)) {
-      // Test with first query - try page control method first
-      try {
-        await performAmazonSearchWithPageControl(parser, query);
-      } catch (error) {
-        console.log('🔄 Page control method failed, trying direct search...');
-        await performDirectAmazonSearch(parser, query);
-      }
+    // Select a random query from the array
+    const randomIndex = Math.floor(Math.random() * searchQueries.length);
+    const query = searchQueries[randomIndex];
 
-      // Wait between searches to be respectful
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    console.log(`🎲 Randomly selected search query: "${query}"`);
+    // Test with first query - try page control method first
+    try {
+      await performAmazonSearchWithPageControl(parser, query);
+    } catch (error) {
+      console.log('🔄 Page control method failed, trying direct search...');
+      await performDirectAmazonSearch(parser, query);
     }
+
+    // Wait between searches to be respectful
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     console.log('\n🎉 Real Amazon search demo completed!');
   } catch (error) {
@@ -68,7 +79,7 @@ async function demonstrateAmazonRealSearch() {
 }
 
 async function performAmazonSearchWithPageControl(
-  parser: JSParserService,
+  parser: BrowserParserService,
   searchQuery: string,
 ) {
   console.log(
@@ -210,7 +221,7 @@ async function checkForAmazonBlocking(html: string): Promise<boolean> {
 }
 
 async function performDirectAmazonSearch(
-  parser: JSParserService,
+  parser: BrowserParserService,
   searchQuery: string,
 ) {
   console.log(`\n🎯 Using direct search URL method for: "${searchQuery}"`);
@@ -255,7 +266,7 @@ async function performDirectAmazonSearch(
 }
 
 async function extractProductsFromCurrentPage(
-  parser: JSParserService,
+  parser: BrowserParserService,
   html: string,
   searchQuery: string,
 ) {
@@ -517,7 +528,7 @@ function displayAmazonProductResults(
 }
 
 async function alternativeAmazonExtraction(
-  parser: JSParserService,
+  parser: BrowserParserService,
   html: string,
 ) {
   console.log('\n🔄 Attempting alternative extraction methods...');

@@ -1,7 +1,7 @@
 // Define our own LogLevel type to match NestJS LogLevel
 export type LogLevel = 'verbose' | 'debug' | 'log' | 'warn' | 'error' | 'fatal';
 
-export interface JSParserConfig {
+export interface BrowserParserConfig {
   loggerLevel?: LogLevel | LogLevel[];
   defaultTimeout?: number;
   headless?: boolean;
@@ -28,7 +28,7 @@ export interface ProxyConfig {
   bypass?: string;
 }
 
-export interface JSParserOptions {
+export interface BrowserParserOptions {
   timeout?: number;
   waitForSelector?: string;
   waitForTimeout?: number;

@@ -7,43 +7,46 @@ import {
   Page,
   Response,
 } from 'playwright-core';
-import { JS_PARSER_CONFIG, JSParserModuleConfig } from './js-parser.config';
 import {
+  BROWSER_PARSER_CONFIG,
+  BrowserParserModuleConfig,
+} from './browser-parser.config';
+import {
+  BrowserParseResponse,
+  BrowserParseResponseWithMetrics,
+  BrowserParserOptions,
+  CursorBasedConfig,
   ExtractionOptions,
   ExtractionSchema,
-  JSParseResponse,
-  JSParseResponseWithMetrics,
-  JSParserOptions,
+  HybridConfig,
+  InfiniteScrollConfig,
+  LoadMoreButtonConfig,
   LogLevel,
   NavigationOptions,
+  NumberedPaginationConfig,
   PageMetrics,
+  PaginatedExtractionOptions,
+  PaginationOptions,
+  PaginationResult,
+  PaginationState,
   TransformFunction,
   TransformObject,
   TransformType,
-  PaginatedExtractionOptions,
-  PaginationResult,
-  PaginationState,
-  PaginationOptions,
-  InfiniteScrollConfig,
-  LoadMoreButtonConfig,
-  NumberedPaginationConfig,
-  CursorBasedConfig,
-  HybridConfig,
 } from './types';
 
 @Injectable()
-export class JSParserService implements OnModuleDestroy {
+export class BrowserParserService implements OnModuleDestroy {
   private readonly logger: Logger;
   private readonly loggerLevel: LogLevel | LogLevel[];
   private browser: Browser | null = null;
   private contexts: Set<BrowserContext> = new Set();
-  private config: JSParserModuleConfig;
+  private config: BrowserParserModuleConfig;
 
   constructor(
-    @Inject(JS_PARSER_CONFIG)
-    config: JSParserModuleConfig,
+    @Inject(BROWSER_PARSER_CONFIG)
+    config: BrowserParserModuleConfig,
   ) {
-    this.logger = new Logger(JSParserService.name, { timestamp: true });
+    this.logger = new Logger(BrowserParserService.name, { timestamp: true });
     this.config = config;
     this.loggerLevel = config.loggerLevel || ['log', 'error', 'debug'];
   }
@@ -152,7 +155,7 @@ export class JSParserService implements OnModuleDestroy {
 
   async getPage(
     url: string,
-    options?: JSParserOptions,
+    options?: BrowserParserOptions,
   ): Promise<{
     page: Page;
     context: BrowserContext;
@@ -217,8 +220,8 @@ export class JSParserService implements OnModuleDestroy {
 
   async fetchHtml(
     url: string,
-    options?: JSParserOptions,
-  ): Promise<JSParseResponse> {
+    options?: BrowserParserOptions,
+  ): Promise<BrowserParseResponse> {
     const { page, context, response } = await this.getPage(url, options);
 
     try {
@@ -231,7 +234,7 @@ export class JSParserService implements OnModuleDestroy {
 
       const responseHeaders = response.headers();
 
-      const result: JSParseResponse = {
+      const result: BrowserParseResponse = {
         html,
         url: response.url(),
         status: response.status(),
@@ -263,8 +266,8 @@ export class JSParserService implements OnModuleDestroy {
 
   async fetchHtmlWithMetrics(
     url: string,
-    options?: JSParserOptions,
-  ): Promise<JSParseResponseWithMetrics> {
+    options?: BrowserParserOptions,
+  ): Promise<BrowserParseResponseWithMetrics> {
     const response = await this.fetchHtml(url, options);
     const metrics = this.extractPageMetrics(response.html);
 
@@ -298,7 +301,7 @@ export class JSParserService implements OnModuleDestroy {
 
   async takeScreenshot(
     url: string,
-    options?: JSParserOptions & {
+    options?: BrowserParserOptions & {
       path?: string;
       type?: 'png' | 'jpeg';
       quality?: number;
@@ -342,7 +345,7 @@ export class JSParserService implements OnModuleDestroy {
 
   async generatePDF(
     url: string,
-    options?: JSParserOptions & {
+    options?: BrowserParserOptions & {
       path?: string;
       format?: string;
       printBackground?: boolean;
@@ -382,7 +385,7 @@ export class JSParserService implements OnModuleDestroy {
   async evaluateOnPage<T = unknown>(
     url: string,
     evaluationFunction: string | ((page: Page) => Promise<T>),
-    options?: JSParserOptions,
+    options?: BrowserParserOptions,
   ): Promise<T | null> {
     const { page, context } = await this.getPage(url, options);
 
@@ -421,7 +424,7 @@ export class JSParserService implements OnModuleDestroy {
   async extractStructured<T = Record<string, unknown>>(
     url: string,
     schema: ExtractionSchema<T>,
-    options?: JSParserOptions,
+    options?: BrowserParserOptions,
   ): Promise<T> {
     const response = await this.fetchHtml(url, options);
     return this.extractStructuredFromHtml(response.html, schema, {
@@ -581,7 +584,7 @@ export class JSParserService implements OnModuleDestroy {
   async extractWithPagination<T = unknown>(
     url: string,
     options: PaginatedExtractionOptions<T>,
-    parserOptions?: JSParserOptions
+    parserOptions?: BrowserParserOptions,
   ): Promise<PaginationResult<T>> {
     const startTime = Date.now();
     const state: PaginationState = {
@@ -617,9 +620,10 @@ export class JSParserService implements OnModuleDestroy {
       result.completed = true;
       result.totalTime = Date.now() - startTime;
       result.metadata.endTime = Date.now();
-      result.metadata.averagePageTime = result.pagesProcessed > 0 
-        ? result.totalTime / result.pagesProcessed 
-        : 0;
+      result.metadata.averagePageTime =
+        result.pagesProcessed > 0
+          ? result.totalTime / result.pagesProcessed
+          : 0;
 
       options.eventHandlers?.onComplete?.(result);
 
@@ -628,7 +632,7 @@ export class JSParserService implements OnModuleDestroy {
       const errorMessage = (error as Error).message;
       result.errors.push(errorMessage);
       result.stopReason = 'error';
-      
+
       if (this.shouldLog('error')) {
         this.logWithLevel('error', 'Pagination error:', error);
       }
@@ -648,7 +652,7 @@ export class JSParserService implements OnModuleDestroy {
     page: Page,
     options: PaginatedExtractionOptions<T>,
     state: PaginationState,
-    result: PaginationResult<T>
+    result: PaginationResult<T>,
   ): Promise<void> {
     const config = options.pagination;
 
@@ -672,7 +676,9 @@ export class JSParserService implements OnModuleDestroy {
         await this.performHybridPagination(page, options, state, result);
         break;
       default:
-        throw new Error(`Unsupported pagination type: ${(config as { type: string }).type}`);
+        throw new Error(
+          `Unsupported pagination type: ${(config as { type: string }).type}`,
+        );
     }
   }
 
@@ -683,7 +689,7 @@ export class JSParserService implements OnModuleDestroy {
     page: Page,
     options: PaginatedExtractionOptions<T>,
     state: PaginationState,
-    result: PaginationResult<T>
+    result: PaginationResult<T>,
   ): Promise<void> {
     const config = options.pagination as InfiniteScrollConfig;
     const scrollOptions = config.scrollOptions || {};
@@ -694,35 +700,54 @@ export class JSParserService implements OnModuleDestroy {
       // Extract items from current view
       const html = await page.content();
       const newItems = await options.extractItems(page, html);
-      
+
       if (config.verbose) {
-        this.logWithLevel('debug', `📦 Extracted ${newItems.length} items from scroll ${state.currentPage + 1}`);
+        this.logWithLevel(
+          'debug',
+          `📦 Extracted ${newItems.length} items from scroll ${state.currentPage + 1}`,
+        );
       }
-      
+
       await this.processNewItems(newItems, options, state, result);
-      
-      options.eventHandlers?.onPageComplete?.(state.currentPage, newItems, state);
+
+      options.eventHandlers?.onPageComplete?.(
+        state.currentPage,
+        newItems,
+        state,
+      );
 
       // Check if we have new items
       if (result.items.length === lastItemCount) {
         // No new items, try scrolling
         if (config.verbose) {
-          this.logWithLevel('debug', `🔄 No new items found, attempting scroll (${scrollCount + 1}/${scrollOptions.maxScrolls || 'unlimited'})`);
+          this.logWithLevel(
+            'debug',
+            `🔄 No new items found, attempting scroll (${scrollCount + 1}/${scrollOptions.maxScrolls || 'unlimited'})`,
+          );
         }
-        
+
         const scrolled = await this.performScroll(page, scrollOptions);
         if (!scrolled) {
           if (config.verbose) {
-            this.logWithLevel('debug', '🛑 Scroll failed or reached end of page');
+            this.logWithLevel(
+              'debug',
+              '🛑 Scroll failed or reached end of page',
+            );
           }
           result.stopReason = 'endReached';
           break;
         }
         scrollCount++;
-        
-        if (scrollOptions.maxScrolls && scrollCount >= scrollOptions.maxScrolls) {
+
+        if (
+          scrollOptions.maxScrolls &&
+          scrollCount >= scrollOptions.maxScrolls
+        ) {
           if (config.verbose) {
-            this.logWithLevel('debug', `🛑 Reached maximum scroll limit (${scrollOptions.maxScrolls})`);
+            this.logWithLevel(
+              'debug',
+              `🛑 Reached maximum scroll limit (${scrollOptions.maxScrolls})`,
+            );
           }
           result.stopReason = 'endReached';
           break;
@@ -731,8 +756,13 @@ export class JSParserService implements OnModuleDestroy {
         // Wait for content to load after scrolling
         if (config.loadingSelector) {
           try {
-            await page.waitForSelector(config.loadingSelector, { timeout: 2000 });
-            await page.waitForSelector(config.loadingSelector, { state: 'hidden', timeout: 10000 });
+            await page.waitForSelector(config.loadingSelector, {
+              timeout: 2000,
+            });
+            await page.waitForSelector(config.loadingSelector, {
+              state: 'hidden',
+              timeout: 10000,
+            });
           } catch {
             // Loading indicator might not appear or disappear quickly
           }
@@ -740,10 +770,12 @@ export class JSParserService implements OnModuleDestroy {
           // Give time for new content to load
           await page.waitForTimeout(2000);
         }
-        
       } else {
         if (config.verbose) {
-          this.logWithLevel('debug', `✅ Found ${result.items.length - lastItemCount} new items (total: ${result.items.length})`);
+          this.logWithLevel(
+            'debug',
+            `✅ Found ${result.items.length - lastItemCount} new items (total: ${result.items.length})`,
+          );
         }
         lastItemCount = result.items.length;
         scrollCount = 0; // Reset scroll count when we get new items
@@ -762,7 +794,7 @@ export class JSParserService implements OnModuleDestroy {
     page: Page,
     options: PaginatedExtractionOptions<T>,
     state: PaginationState,
-    result: PaginationResult<T>
+    result: PaginationResult<T>,
   ): Promise<void> {
     const config = options.pagination as LoadMoreButtonConfig;
 
@@ -774,7 +806,7 @@ export class JSParserService implements OnModuleDestroy {
     while (this.shouldContinuePagination(config, state, result)) {
       // Try to find and click load more button
       const buttonClicked = await this.clickLoadMoreButton(page, config);
-      
+
       if (!buttonClicked) {
         result.stopReason = 'endReached';
         break;
@@ -782,10 +814,12 @@ export class JSParserService implements OnModuleDestroy {
 
       // Wait for new content
       await page.waitForTimeout(config.waitAfterClick || 2000);
-      
+
       if (config.waitForSelector) {
         try {
-          await page.waitForSelector(config.waitForSelector, { timeout: 10000 });
+          await page.waitForSelector(config.waitForSelector, {
+            timeout: 10000,
+          });
         } catch {
           // Selector might not appear
         }
@@ -795,8 +829,12 @@ export class JSParserService implements OnModuleDestroy {
       html = await page.content();
       newItems = await options.extractItems(page, html);
       await this.processNewItems(newItems, options, state, result);
-      
-      options.eventHandlers?.onPageComplete?.(state.currentPage, newItems, state);
+
+      options.eventHandlers?.onPageComplete?.(
+        state.currentPage,
+        newItems,
+        state,
+      );
 
       await page.waitForTimeout(config.delay || 1000);
       state.currentPage++;
@@ -811,7 +849,7 @@ export class JSParserService implements OnModuleDestroy {
     page: Page,
     options: PaginatedExtractionOptions<T>,
     state: PaginationState,
-    result: PaginationResult<T>
+    result: PaginationResult<T>,
   ): Promise<void> {
     const config = options.pagination as NumberedPaginationConfig;
 
@@ -820,12 +858,16 @@ export class JSParserService implements OnModuleDestroy {
       const html = await page.content();
       const newItems = await options.extractItems(page, html);
       await this.processNewItems(newItems, options, state, result);
-      
-      options.eventHandlers?.onPageComplete?.(state.currentPage, newItems, state);
+
+      options.eventHandlers?.onPageComplete?.(
+        state.currentPage,
+        newItems,
+        state,
+      );
 
       // Try to navigate to next page
       const navigated = await this.navigateToNextPage(page, config);
-      
+
       if (!navigated) {
         result.stopReason = 'endReached';
         break;
@@ -844,7 +886,7 @@ export class JSParserService implements OnModuleDestroy {
     page: Page,
     options: PaginatedExtractionOptions<T>,
     state: PaginationState,
-    result: PaginationResult<T>
+    result: PaginationResult<T>,
   ): Promise<void> {
     const config = options.pagination as CursorBasedConfig;
     let cursor = config.initialCursor;
@@ -854,17 +896,21 @@ export class JSParserService implements OnModuleDestroy {
       const html = await page.content();
       const newItems = await options.extractItems(page, html);
       await this.processNewItems(newItems, options, state, result);
-      
-      options.eventHandlers?.onPageComplete?.(state.currentPage, newItems, state);
+
+      options.eventHandlers?.onPageComplete?.(
+        state.currentPage,
+        newItems,
+        state,
+      );
 
       // Extract cursor for next page
       const nextCursor = await config.extractCursor(page, result.items);
-      
+
       if (!nextCursor) {
         result.stopReason = 'endReached';
         break;
       }
-      
+
       cursor = nextCursor;
 
       state.lastCursor = cursor;
@@ -873,7 +919,7 @@ export class JSParserService implements OnModuleDestroy {
       // Navigate to next page using cursor
       await config.navigateWithCursor(page, cursor);
       await page.waitForTimeout(config.delay || 2000);
-      
+
       state.currentPage++;
       result.pagesProcessed++;
     }
@@ -886,7 +932,7 @@ export class JSParserService implements OnModuleDestroy {
     _page: Page,
     _options: PaginatedExtractionOptions<T>,
     _state: PaginationState,
-    _result: PaginationResult<T>
+    _result: PaginationResult<T>,
   ): Promise<void> {
     // Implementation for time-based pagination
     // This is more complex and depends on specific use cases
@@ -900,26 +946,29 @@ export class JSParserService implements OnModuleDestroy {
     page: Page,
     options: PaginatedExtractionOptions<T>,
     state: PaginationState,
-    result: PaginationResult<T>
+    result: PaginationResult<T>,
   ): Promise<void> {
     const config = options.pagination as HybridConfig;
-    
+
     try {
       // Try primary strategy first
-      const primaryOptions: PaginatedExtractionOptions<T> = { 
-        ...options, 
-        pagination: config.primaryStrategy as PaginationOptions 
+      const primaryOptions: PaginatedExtractionOptions<T> = {
+        ...options,
+        pagination: config.primaryStrategy as PaginationOptions,
       };
       await this.performPagination(page, primaryOptions, state, result);
     } catch (error) {
       if (this.shouldLog('warn')) {
-        this.logWithLevel('warn', 'Primary pagination strategy failed, trying fallback');
+        this.logWithLevel(
+          'warn',
+          'Primary pagination strategy failed, trying fallback',
+        );
       }
-      
+
       // Try fallback strategy
-      const fallbackOptions: PaginatedExtractionOptions<T> = { 
-        ...options, 
-        pagination: config.fallbackStrategy as PaginationOptions 
+      const fallbackOptions: PaginatedExtractionOptions<T> = {
+        ...options,
+        pagination: config.fallbackStrategy as PaginationOptions,
       };
       await this.performPagination(page, fallbackOptions, state, result);
     }
@@ -931,13 +980,13 @@ export class JSParserService implements OnModuleDestroy {
   private shouldContinuePagination<T>(
     config: PaginationOptions,
     state: PaginationState,
-    result: PaginationResult<T>
+    result: PaginationResult<T>,
   ): boolean {
     if (config.maxPages && state.currentPage >= config.maxPages) {
       result.stopReason = 'maxPages';
       return false;
     }
-    
+
     if (config.maxItems && result.items.length >= config.maxItems) {
       result.stopReason = 'maxItems';
       return false;
@@ -958,10 +1007,10 @@ export class JSParserService implements OnModuleDestroy {
     newItems: T[],
     options: PaginatedExtractionOptions<T>,
     state: PaginationState,
-    result: PaginationResult<T>
+    result: PaginationResult<T>,
   ): Promise<void> {
     for (const item of newItems) {
-      const isDuplicate = options.isDuplicate 
+      const isDuplicate = options.isDuplicate
         ? options.isDuplicate(item, result.items)
         : false;
 
@@ -971,7 +1020,11 @@ export class JSParserService implements OnModuleDestroy {
       }
     }
 
-    options.eventHandlers?.onItemsExtracted?.(newItems, state.currentPage, state);
+    options.eventHandlers?.onItemsExtracted?.(
+      newItems,
+      state.currentPage,
+      state,
+    );
   }
 
   /**
@@ -979,7 +1032,7 @@ export class JSParserService implements OnModuleDestroy {
    */
   private async performScroll(
     page: Page,
-    scrollOptions: InfiniteScrollConfig['scrollOptions'] = {}
+    scrollOptions: InfiniteScrollConfig['scrollOptions'] = {},
   ): Promise<boolean> {
     try {
       if (scrollOptions.scrollToBottom !== false) {
@@ -987,11 +1040,14 @@ export class JSParserService implements OnModuleDestroy {
         const beforeScroll = await page.evaluate(() => ({
           scrollY: window.scrollY,
           scrollHeight: document.documentElement.scrollHeight,
-          clientHeight: document.documentElement.clientHeight
+          clientHeight: document.documentElement.clientHeight,
         }));
 
         if (this.shouldLog('debug')) {
-          this.logWithLevel('debug', `🔄 Scrolling to bottom from ${beforeScroll.scrollY} (page height: ${beforeScroll.scrollHeight})`);
+          this.logWithLevel(
+            'debug',
+            `🔄 Scrolling to bottom from ${beforeScroll.scrollY} (page height: ${beforeScroll.scrollHeight})`,
+          );
         }
 
         // Scroll to bottom using multiple methods for better compatibility
@@ -999,7 +1055,7 @@ export class JSParserService implements OnModuleDestroy {
           // Method 1: Scroll to document height
           window.scrollTo({
             top: document.documentElement.scrollHeight,
-            behavior: 'smooth'
+            behavior: 'smooth',
           });
         });
 
@@ -1008,7 +1064,8 @@ export class JSParserService implements OnModuleDestroy {
 
         // Method 2: Ensure we're really at the bottom
         await page.evaluate(() => {
-          document.documentElement.scrollTop = document.documentElement.scrollHeight;
+          document.documentElement.scrollTop =
+            document.documentElement.scrollHeight;
           document.body.scrollTop = document.body.scrollHeight;
         });
 
@@ -1016,36 +1073,44 @@ export class JSParserService implements OnModuleDestroy {
         const afterScroll = await page.evaluate(() => ({
           scrollY: window.scrollY,
           scrollHeight: document.documentElement.scrollHeight,
-          clientHeight: document.documentElement.clientHeight
+          clientHeight: document.documentElement.clientHeight,
         }));
 
         if (this.shouldLog('debug')) {
-          this.logWithLevel('debug', `✅ Scrolled to ${afterScroll.scrollY} (page height: ${afterScroll.scrollHeight})`);
+          this.logWithLevel(
+            'debug',
+            `✅ Scrolled to ${afterScroll.scrollY} (page height: ${afterScroll.scrollHeight})`,
+          );
         }
 
         // Check if we're near the bottom (within 100px)
-        const isNearBottom = afterScroll.scrollY + afterScroll.clientHeight >= afterScroll.scrollHeight - 100;
-        
+        const isNearBottom =
+          afterScroll.scrollY + afterScroll.clientHeight >=
+          afterScroll.scrollHeight - 100;
+
         if (!isNearBottom && afterScroll.scrollY === beforeScroll.scrollY) {
           if (this.shouldLog('debug')) {
-            this.logWithLevel('debug', '⚠️ Scroll position did not change, may have reached end');
+            this.logWithLevel(
+              'debug',
+              '⚠️ Scroll position did not change, may have reached end',
+            );
           }
           return false;
         }
-
       } else if (scrollOptions.scrollDistance) {
-        const distance = typeof scrollOptions.scrollDistance === 'string'
-          ? parseInt(scrollOptions.scrollDistance)
-          : scrollOptions.scrollDistance;
+        const distance =
+          typeof scrollOptions.scrollDistance === 'string'
+            ? parseInt(scrollOptions.scrollDistance)
+            : scrollOptions.scrollDistance;
 
         if (this.shouldLog('debug')) {
           this.logWithLevel('debug', `🔄 Scrolling by ${distance}px`);
         }
-          
+
         await page.evaluate((dist) => {
           window.scrollBy({
             top: dist,
-            behavior: 'smooth'
+            behavior: 'smooth',
           });
         }, distance);
       }
@@ -1065,15 +1130,18 @@ export class JSParserService implements OnModuleDestroy {
    */
   private async clickLoadMoreButton(
     page: Page,
-    config: LoadMoreButtonConfig
+    config: LoadMoreButtonConfig,
   ): Promise<boolean> {
-    const selectors = [config.buttonSelector, ...(config.alternativeSelectors || [])];
+    const selectors = [
+      config.buttonSelector,
+      ...(config.alternativeSelectors || []),
+    ];
 
     for (const selector of selectors) {
       try {
         const button = page.locator(selector);
         const isVisible = await button.isVisible();
-        
+
         if (isVisible) {
           await button.click();
           return true;
@@ -1091,18 +1159,18 @@ export class JSParserService implements OnModuleDestroy {
    */
   private async navigateToNextPage(
     page: Page,
-    config: NumberedPaginationConfig
+    config: NumberedPaginationConfig,
   ): Promise<boolean> {
     try {
       const nextButton = page.locator(config.nextButtonSelector);
       const isVisible = await nextButton.isVisible();
-      
+
       if (isVisible) {
         await nextButton.click();
         await page.waitForLoadState('networkidle');
         return true;
       }
-      
+
       return false;
     } catch {
       return false;
@@ -1126,7 +1194,7 @@ export class JSParserService implements OnModuleDestroy {
       this.browser = null;
 
       if (this.shouldLog('debug')) {
-        this.logWithLevel('debug', '🧹 JSParserService cleanup completed');
+        this.logWithLevel('debug', '🧹 BrowserParserService cleanup completed');
       }
     } catch (error) {
       if (this.shouldLog('error')) {
