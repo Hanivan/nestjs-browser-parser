@@ -60,7 +60,7 @@ async function demonstrateShopeeRealSearch() {
 }
 
 async function performShopeeSearch(
-  parser: JSParserService,
+  parser: BrowserParserService,
   searchQuery: string,
 ) {
   console.log(`\n🔍 Performing real search for: "${searchQuery}"`);
@@ -282,7 +282,7 @@ async function performShopeeSearch(
 }
 
 async function checkForLoginRedirect(
-  parser: JSParserService,
+  parser: BrowserParserService,
   html: string,
 ): Promise<boolean> {
   // Check for login page indicators in HTML
@@ -309,7 +309,7 @@ async function checkForLoginRedirect(
 }
 
 async function performDirectSearch(
-  parser: JSParserService,
+  parser: BrowserParserService,
   searchQuery: string,
 ) {
   console.log(`\n🎯 Using direct search URL method for: "${searchQuery}"`);
@@ -353,7 +353,7 @@ async function performDirectSearch(
 }
 
 async function extractProductsFromSearchResults(
-  parser: JSParserService,
+  parser: BrowserParserService,
   searchUrl: string,
   searchQuery: string,
 ) {
@@ -604,7 +604,7 @@ function displayRealProductResults(
 }
 
 async function alternativeRealExtraction(
-  parser: JSParserService,
+  parser: BrowserParserService,
   html: string,
 ) {
   console.log('\n🔄 Attempting alternative extraction methods...');

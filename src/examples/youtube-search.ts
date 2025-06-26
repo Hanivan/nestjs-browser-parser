@@ -76,7 +76,7 @@ async function demonstrateYouTubeSearch() {
 }
 
 async function performYouTubeSearchWithPageControl(
-  parser: JSParserService,
+  parser: BrowserParserService,
   searchQuery: string,
 ) {
   console.log(`\n🔍 Performing YouTube search for: "${searchQuery}"`);
@@ -195,7 +195,7 @@ async function performSearchOnYouTubePage(page: Page, searchQuery: string) {
 }
 
 async function extractVideosFromCurrentPage(
-  parser: JSParserService,
+  parser: BrowserParserService,
   html: string,
   searchQuery: string,
 ) {
@@ -463,7 +463,7 @@ function displayYouTubeVideoResults(
 }
 
 async function alternativeYouTubeExtraction(
-  parser: JSParserService,
+  parser: BrowserParserService,
   html: string,
 ) {
   console.log('\n🔄 Attempting alternative extraction methods...');

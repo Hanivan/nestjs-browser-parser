@@ -98,7 +98,7 @@ async function demonstratePaginationStrategies() {
   console.log('\n🎉 Pagination strategies demo completed!');
 }
 
-async function testNumberedPagination(parser: JSParserService) {
+async function testNumberedPagination(parser: BrowserParserService) {
   // Example with a hypothetical news site that uses numbered pagination
   const searchUrl = 'https://news.ycombinator.com/';
 
@@ -187,7 +187,7 @@ async function testNumberedPagination(parser: JSParserService) {
   displayResults(result, 'Numbered Pagination', 'articles');
 }
 
-async function testRedditInfiniteScroll(parser: JSParserService) {
+async function testRedditInfiniteScroll(parser: BrowserParserService) {
   // Reddit r/programming with infinite scroll
   const searchUrl = 'https://reddit.com/r/programming/';
 
@@ -292,9 +292,10 @@ async function testRedditInfiniteScroll(parser: JSParserService) {
   displayResults(result, 'Reddit Infinite Scroll', 'posts');
 }
 
-async function testIMDBLoadMore(parser: JSParserService) {
+async function testIMDBLoadMore(parser: BrowserParserService) {
   // IMDB search results with load more functionality
-  const searchUrl = 'https://www.imdb.com/find/?q=spiderman&s=tt&exact=true&ref_=fn_ttl_ex';
+  const searchUrl =
+    'https://www.imdb.com/find/?q=spiderman&s=tt&exact=true&ref_=fn_ttl_ex';
 
   const paginationOptions: PaginatedExtractionOptions<IMDBMovie> = {
     pagination: {
@@ -323,25 +324,40 @@ async function testIMDBLoadMore(parser: JSParserService) {
 
         movieElements.forEach((element) => {
           try {
-            const titleElement = element.querySelector('.ipc-metadata-list-summary-item__t, .result_text a, h3 a');
-            const yearElement = element.querySelector('.titleDescription, .result_text, .ipc-metadata-list-summary-item__li');
-            const descElement = element.querySelector('.plot_summary, .storyline, .ipc-html-content');
-            const ratingElement = element.querySelector('.ratings-bar, .iMDbRating, .ratingValue');
-            
+            const titleElement = element.querySelector(
+              '.ipc-metadata-list-summary-item__t, .result_text a, h3 a',
+            );
+            const yearElement = element.querySelector(
+              '.titleDescription, .result_text, .ipc-metadata-list-summary-item__li',
+            );
+            const descElement = element.querySelector(
+              '.plot_summary, .storyline, .ipc-html-content',
+            );
+            const ratingElement = element.querySelector(
+              '.ratings-bar, .iMDbRating, .ratingValue',
+            );
+
             if (titleElement) {
               const fullText = titleElement.textContent?.trim() || '';
               const url = titleElement.getAttribute('href') || '';
-              
+
               // Extract title and year from text like "Spider-Man (2002)"
-              const titleMatch = fullText.match(/^(.+?)\s*\((\d{4}).*\)/) || [null, fullText, ''];
+              const titleMatch = fullText.match(/^(.+?)\s*\((\d{4}).*\)/) || [
+                null,
+                fullText,
+                '',
+              ];
               const title = titleMatch[1]?.trim() || fullText;
               const year = titleMatch[2] || '';
-              
+
               // Determine type (movie, TV series, etc.)
               const typeText = yearElement?.textContent || '';
-              const type = typeText.includes('TV') ? 'TV Series' : 
-                          typeText.includes('Video') ? 'Video' : 'Movie';
-              
+              const type = typeText.includes('TV')
+                ? 'TV Series'
+                : typeText.includes('Video')
+                  ? 'Video'
+                  : 'Movie';
+
               const description = descElement?.textContent?.trim() || '';
               const rating = ratingElement?.textContent?.trim() || '';
 
@@ -351,7 +367,9 @@ async function testIMDBLoadMore(parser: JSParserService) {
                   year,
                   type,
                   description: description.substring(0, 200),
-                  url: url.startsWith('http') ? url : `https://www.imdb.com${url}`,
+                  url: url.startsWith('http')
+                    ? url
+                    : `https://www.imdb.com${url}`,
                   rating: rating || undefined,
                 });
               }
@@ -399,7 +417,7 @@ async function testIMDBLoadMore(parser: JSParserService) {
   displayResults(result, 'IMDB Load More', 'movies');
 }
 
-async function testQuotesNumberedPagination(parser: JSParserService) {
+async function testQuotesNumberedPagination(parser: BrowserParserService) {
   // Quotes to Scrape - a site designed for scraping practice with numbered pagination
   const searchUrl = 'http://quotes.toscrape.com/';
 
